@@ -2,12 +2,15 @@ provider "aws" {
   region = var.region
 }
 
+# Reference the existing default VPC
 resource "aws_default_vpc" "default" {}
 
-resource "aws_default_subnet" "default" {
-  availability_zone = "us-east-1a"
+# Data source to reference the existing default subnet in us-east-1a
+data "aws_subnet" "existing_default_a" {
+  id = "subnet-05c1fad9d625903e9" 
 }
 
+# Create a default subnet in us-east-1b (if it doesn't exist)
 resource "aws_default_subnet" "default_b" {
   availability_zone = "us-east-1b"
 }
