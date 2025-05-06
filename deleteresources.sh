@@ -9,6 +9,8 @@ REDIS_CLUSTER_ID="django-microservice-redis"
 LOG_GROUP="/ecs/django-microservice"
 ROLE_NAME="ecs_task_execution_role"
 SUBNET_GROUP_NAME="redis-subnet-group"
+SECURITY_GROUP_NAME="eks-nodes-sg"
+VPC_ID="vpc-03ef804adafe75364"  # Add your VPC ID here
 
 echo "Deleting ECS service..."
 SERVICE_ARN=$(aws ecs list-services --cluster "$CLUSTER_NAME" --region $AWS_REGION --query "serviceArns[?contains(@, '$SERVICE_NAME')]" --output text)
@@ -53,7 +55,6 @@ echo "Deleting Elasticache Redis cluster..."
 aws elasticache describe-cache-clusters --region $AWS_REGION --query "CacheClusters[?CacheClusterId=='$REDIS_CLUSTER_ID']" | grep "$REDIS_CLUSTER_ID" &>/dev/null
 if [ $? -eq 0 ]; then
   aws elasticache delete-cache-cluster --cache-cluster-id "$REDIS_CLUSTER_ID" --region $AWS_REGION
-
   echo "Waiting for Redis cluster to be deleted..."
   aws elasticache wait cache-cluster-deleted --cache-cluster-id "$REDIS_CLUSTER_ID" --region $AWS_REGION
 else
@@ -67,7 +68,6 @@ if [ $? -eq 0 ]; then
 else
   echo "Subnet group not found. Skipping."
 fi
-
 
 echo "Deleting ECR repository..."
 aws ecr describe-repositories --region $AWS_REGION --query "repositories[?repositoryName=='$REPO_NAME']" | grep "$REPO_NAME" &>/dev/null
@@ -84,6 +84,23 @@ if [ $? -eq 0 ]; then
   aws iam delete-role --role-name "$ROLE_NAME"
 else
   echo "IAM role not found. Skipping."
+fi
+
+echo "Deleting VPC..."
+VPC_EXISTS=$(aws ec2 describe-vpcs --vpc-ids "$VPC_ID" --region $AWS_REGION --query "Vpcs[0].VpcId" --output text)
+if [ "$VPC_EXISTS" != "None" ]; then
+  echo "VPC found. Deleting..."
+  aws ec2 delete-vpc --vpc-id "$VPC_ID" --region $AWS_REGION
+else
+  echo "VPC not found. Skipping."
+fi
+
+echo "Deleting Security Group..."
+SG_EXISTS=$(aws ec2 describe-security-groups --filters Name=group-name,Values="$SECURITY_GROUP_NAME" --region $AWS_REGION --query "SecurityGroups[0].GroupId" --output text)
+if [ "$SG_EXISTS" != "None" ]; then
+  aws ec2 delete-security-group --group-id "$SG_EXISTS" --region $AWS_REGION
+else
+  echo "Security group $SECURITY_GROUP_NAME not found. Skipping."
 fi
 
 echo "✅ Cleanup complete."
