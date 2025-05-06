@@ -21,18 +21,36 @@ jobs:
         with:
           terraform_version: '1.5.0'
 
-      - name: Terraform Init
+      - name: Terraform Init (Local)
         run: |
-          terraform init -backend-config="bucket=django-microservice-tf-state" \
-                         -backend-config="key=django-microservice/terraform.tfstate" \
-                         -backend-config="region=${{ secrets.AWS_REGION }}" \
-                         -backend-config="dynamodb_table=terraform-locks"
+          terraform init
         working-directory: ./terraform
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
 
-      - name: Terraform Apply
+      - name: Terraform Apply (Local)
+        run: |
+          terraform apply -auto-approve \
+            -var="region=${{ secrets.AWS_REGION }}"
+        working-directory: ./terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Terraform Init (S3 Backend)
+        run: |
+          terraform init -backend-config="bucket=django-microservice-tf-state" \
+                         -backend-config="key=django-microservice/terraform.tfstate" \
+                         -backend-config="region=${{ secrets.AWS_REGION }}" \
+                         -backend-config="dynamodb_table=terraform-locks" \
+                         -migrate-state -force
+        working-directory: ./terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Terraform Apply (S3 Backend)
         run: |
           terraform apply -auto-approve \
             -var="region=${{ secrets.AWS_REGION }}"
@@ -66,7 +84,7 @@ jobs:
           echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
 
       - name: Set up kubectl
-        uses: azure/setup-kubectl@v3
+        uses: azure/setup-kubectl@v4
         with:
           version: 'latest'
 
