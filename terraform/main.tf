@@ -44,39 +44,26 @@ data "aws_ecr_repository" "app" {
   name = "django-microservice"
 }
 
-# IAM role for EKS cluster
-resource "aws_iam_role" "eks_cluster" {
+# Data source to reference the existing EKS cluster IAM role
+data "aws_iam_role" "eks_cluster" {
   name = "django-microservice-eks-cluster-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "eks.amazonaws.com"
-        }
-      }
-    ]
-  })
 }
 
 # Attach policies to EKS cluster role
 resource "aws_iam_role_policy_attachment" "eks_cluster_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy"
-  role       = aws_iam_role.eks_cluster.name
+  role       = data.aws_iam_role.eks_cluster.name
 }
 
 resource "aws_iam_role_policy_attachment" "eks_vpc_resource_controller" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController"
-  role       = aws_iam_role.eks_cluster.name
+  role       = data.aws_iam_role.eks_cluster.name
 }
 
 # EKS cluster
 resource "aws_eks_cluster" "django_microservice" {
   name     = "django-microservice-cluster"
-  role_arn = aws_iam_role.eks_cluster.arn
+  role_arn = data.aws_iam_role.eks_cluster.arn
 
   vpc_config {
     subnet_ids = [
@@ -92,45 +79,32 @@ resource "aws_eks_cluster" "django_microservice" {
   ]
 }
 
-# IAM role for EKS node group
-resource "aws_iam_role" "eks_node_group" {
+# Data source to reference the existing EKS node group IAM role
+data "aws_iam_role" "eks_node_group" {
   name = "django-microservice-eks-node-group-role"
-
-  assume_role_policy = jsonencode({
-    Version = "2012-10-17"
-    Statement = [
-      {
-        Action = "sts:AssumeRole"
-        Effect = "Allow"
-        Principal = {
-          Service = "ec2.amazonaws.com"
-        }
-      }
-    ]
-  })
 }
 
 # Attach policies to EKS node group role
 resource "aws_iam_role_policy_attachment" "eks_worker_node_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy"
-  role       = aws_iam_role.eks_node_group.name
+  role       = data.aws_iam_role.eks_node_group.name
 }
 
 resource "aws_iam_role_policy_attachment" "eks_cni_policy" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy"
-  role       = aws_iam_role.eks_node_group.name
+  role       = data.aws_iam_role.eks_node_group.name
 }
 
 resource "aws_iam_role_policy_attachment" "ec2_container_registry_read_only" {
   policy_arn = "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly"
-  role       = aws_iam_role.eks_node_group.name
+  role       = data.aws_iam_role.eks_node_group.name
 }
 
 # EKS node group
 resource "aws_eks_node_group" "django_microservice" {
   cluster_name    = aws_eks_cluster.django_microservice.name
   node_group_name = "django-microservice-nodes"
-  node_role_arn   = aws_iam_role.eks_node_group.arn
+  node_role_arn   = data.aws_iam_role.eks_node_group.arn
   subnet_ids      = [
     data.aws_subnet.existing_default_a.id,
     aws_default_subnet.default_b.id
