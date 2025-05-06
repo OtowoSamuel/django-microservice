@@ -1,0 +1,45 @@
+# Git-related
+.git/
+
+# Python-related
+**/__pycache__/
+**/*.py[cod]
+**/*.so
+*.egg-info/
+.eggs/
+*.manifest
+*.spec
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env/
+
+# Django-specific
+*.sqlite3
+*.log
+staticfiles/
+media/
+
+# Environment variables
+.env
+.env.*
+
+# Node.js
+node_modules/
+
+# VSCode and IDEs
+.vscode/
+.idea/
+*.sw?
+
+# OS-specific
+.DS_Store
+Thumbs.db
+
+*.tfstate
+*.tfstate.backup
+
+.terraform/
+.terraform.lock.hcl

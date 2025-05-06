@@ -1,0 +1,112 @@
+name: Deploy to EKS
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: '1.5.0'
+
+      - name: Terraform Init
+        run: |
+          terraform init -backend-config="bucket=django-microservice-tf-state" \
+                         -backend-config="key=django-microservice/terraform.tfstate" \
+                         -backend-config="region=${{ secrets.AWS_REGION }}" \
+                         -backend-config="dynamodb_table=terraform-locks"
+        working-directory: ./terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Terraform Apply
+        run: |
+          terraform apply -auto-approve \
+            -var="region=${{ secrets.AWS_REGION }}"
+        working-directory: ./terraform
+        env:
+          AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+
+      - name: Extract Terraform Outputs
+        id: terraform_outputs
+        run: |
+          echo "ECR_REPO_URL=$(terraform output -raw ecr_repository_url)" >> $GITHUB_ENV
+        working-directory: ./terraform
+
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        run: |
+          aws ecr get-login-password --region ${{ secrets.AWS_REGION }} | docker login --username AWS --password-stdin ${{ env.ECR_REPO_URL }}
+
+      - name: Build and Push Docker Image
+        run: |
+          TAG=${{ github.sha }}
+          docker build -t ${{ env.ECR_REPO_URL }}:$TAG .
+          docker push ${{ env.ECR_REPO_URL }}:$TAG
+          echo "IMAGE_TAG=$TAG" >> $GITHUB_ENV
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Update Kubeconfig
+        run: |
+          aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name django-microservice-cluster
+
+      - name: Check for microservices-k8.yml
+        run: |
+          if [ ! -f "microservices-k8.yml" ]; then
+            echo "Error: microservices-k8.yml not found"
+            exit 1
+          fi
+
+      - name: Substitute ECR_REPO_URL
+        run: |
+          sed -i "s|\${ECR_REPO_URL}:latest|${{ env.ECR_REPO_URL }}:${{ env.IMAGE_TAG }}|g" microservices-k8.yml
+
+      - name: Create Kubernetes Secret
+        run: |
+          cat <<EOF | kubectl apply -f -
+          apiVersion: v1
+          kind: Secret
+          metadata:
+            name: app-secrets
+          type: Opaque
+          stringData:
+            DB_NAME: "${{ secrets.DB_NAME }}"
+            DB_USER: "${{ secrets.DB_USER }}"
+            DB_PASSWORD: "${{ secrets.DB_PASSWORD }}"
+            DB_HOST: "db"
+            SECRET_KEY: "${{ secrets.SECRET_KEY }}"
+          EOF
+
+      - name: Deploy to EKS
+        run: |
+          kubectl apply -f microservices-k8.yml --validate=true
+        continue-on-error: false
+
+      - name: Verify deployment
+        run: |
+          kubectl rollout status deployment -n default --timeout=5m
+          kubectl get pods -n default -o wide
