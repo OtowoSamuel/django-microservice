@@ -1,0 +1,1016 @@
+{
+  "version": 4,
+  "terraform_version": "1.11.4",
+  "serial": 101,
+  "lineage": "2db7cb6e-44bb-6258-adf9-ca9a7ac4be3a",
+  "outputs": {
+    "ecr_repository_url": {
+      "value": "343218225856.dkr.ecr.us-east-1.amazonaws.com/django-microservice",
+      "type": "string"
+    },
+    "eks_cluster_endpoint": {
+      "value": "https://FAEC8FE48DFE9055A7C102F2431A9C89.gr7.us-east-1.eks.amazonaws.com",
+      "type": "string"
+    },
+    "eks_cluster_name": {
+      "value": "django-microservice-cluster",
+      "type": "string"
+    }
+  },
+  "resources": [
+    {
+      "mode": "data",
+      "type": "aws_caller_identity",
+      "name": "current",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "account_id": "343218225856",
+            "arn": "arn:aws:iam::343218225856:user/otowo",
+            "id": "343218225856",
+            "user_id": "AIDAU72LGQLABMD63PZAY"
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_ecr_repository",
+      "name": "app",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ecr:us-east-1:343218225856:repository/django-microservice",
+            "encryption_configuration": [
+              {
+                "encryption_type": "AES256",
+                "kms_key": ""
+              }
+            ],
+            "id": "django-microservice",
+            "image_scanning_configuration": [
+              {
+                "scan_on_push": false
+              }
+            ],
+            "image_tag_mutability": "MUTABLE",
+            "most_recent_image_tags": [
+              "4a0c9a1780d393904edeac0e2383060f7e6af5e3"
+            ],
+            "name": "django-microservice",
+            "registry_id": "343218225856",
+            "repository_url": "343218225856.dkr.ecr.us-east-1.amazonaws.com/django-microservice",
+            "tags": {}
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_eks_cluster",
+      "name": "django_microservice",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "access_config": [
+              {
+                "authentication_mode": "CONFIG_MAP",
+                "bootstrap_cluster_creator_admin_permissions": true
+              }
+            ],
+            "arn": "arn:aws:eks:us-east-1:343218225856:cluster/django-microservice-cluster",
+            "certificate_authority": [
+              {
+                "data": "LS0tLS1CRUdJTiBDRVJUSUZJQ0FURS0tLS0tCk1JSURCVENDQWUyZ0F3SUJBZ0lJQnZvWW1TVXhxeUl3RFFZSktvWklodmNOQVFFTEJRQXdGVEVUTUJFR0ExVUUKQXhNS2EzVmlaWEp1WlhSbGN6QWVGdzB5TlRBMU1EWXhOVE0wTXpkYUZ3MHpOVEExTURReE5UTTVNemRhTUJVeApFekFSQmdOVkJBTVRDbXQxWW1WeWJtVjBaWE13Z2dFaU1BMEdDU3FHU0liM0RRRUJBUVVBQTRJQkR3QXdnZ0VLCkFvSUJBUUNlUU5pL1RCUlRwaERaQ3NkbXBYSXBMZ1N5TkRMa3Nmcmx1d0IxbnFCa1VlU0ZrVS9maTdwVmVpU3AKcG9QbzE4bUdWRWh1S1UvcXBodlBhT3BXQUdPb2NoTlBxM25DQzdhYzYveXBGQWlRMnJKbGhYdkNLNnJkdmtnVAp1NnBIOEI4eWpGZXRibzNyOTYxcDhQcmdXbmdTUklGVE1Vd0VHU242VlVZQW1rU3REbmIwSmpiQlNrRHAwOUp3Cit3aDZHdjNrU3dUckpTRWZuR2YzZDh1VnExT1V2NG9DdmM0dnBycGc4R0tuWXh6YWFHaHlzeEtnbVc5Nk51cGQKSkNxRGFTMWFGMkFmbmNhQU1FVllqT0MwMEFOQXdOVTZSY3ZFUGpDaVJoVS91YlNRRzhsOTUzWlYrZ0tDSnhqRApUbW4yUmhKWkxVYy93WmlwQXc5QVhwUWFpUGZmQWdNQkFBR2pXVEJYTUE0R0ExVWREd0VCL3dRRUF3SUNwREFQCkJnTlZIUk1CQWY4RUJUQURBUUgvTUIwR0ExVWREZ1FXQkJSSmEyYVBpMzZ6bCtUUmZReS9tUnU5VkRHRnd6QVYKQmdOVkhSRUVEakFNZ2dwcmRXSmxjbTVsZEdWek1BMEdDU3FHU0liM0RRRUJDd1VBQTRJQkFRQTI4YzRhem5kaQovdmorYkJhN2d0VUNuRmU4djQwS3BSK1F0TFc2Q3R5Ny9mTUU4WnBzbzVNZWVmYmt1QmN6TmpQdXdUOXlXSTBSCm81S0c3Zm1KU3FDKzBkV3Z5S0g4aXZzOU45TUVUemRRZ2pjL2w3bTFsU2ZwdlJLWTIrdWFGSktoOUdPa0QreXQKSnhvV2pPK1Y4K0tJOWxzclp4Y2FSRHdxY3UwZCtKVk9ZSmtaNUQrS3Y1ems1QjFiWnVlOWJZV1RpMUY4ejhVUwpyMVJSUnVZbExFS1grcnM0MnZpb21DV1dzc25KS2lRdlB1MEQyWUpHZnAvQVVuWDZmazJ5RUpKOXBOcXh5UnZkCjJVRzFRaFkxL0RLdUxtUGRWeG56Uk5KWmlha2luYit1Mm9XTzZPS01ndUlQRHNlUUZtTjgrYTV2TmVnZG11eWIKOG1yV093bnNKdXIyCi0tLS0tRU5EIENFUlRJRklDQVRFLS0tLS0K"
+              }
+            ],
+            "cluster_id": null,
+            "compute_config": [],
+            "created_at": "2025-05-06T15:35:29Z",
+            "enabled_cluster_log_types": [],
+            "endpoint": "https://FAEC8FE48DFE9055A7C102F2431A9C89.gr7.us-east-1.eks.amazonaws.com",
+            "id": "django-microservice-cluster",
+            "identity": [
+              {
+                "oidc": [
+                  {
+                    "issuer": "https://oidc.eks.us-east-1.amazonaws.com/id/FAEC8FE48DFE9055A7C102F2431A9C89"
+                  }
+                ]
+              }
+            ],
+            "kubernetes_network_config": [
+              {
+                "elastic_load_balancing": [
+                  {
+                    "enabled": false
+                  }
+                ],
+                "ip_family": "ipv4",
+                "service_ipv4_cidr": "10.100.0.0/16",
+                "service_ipv6_cidr": ""
+              }
+            ],
+            "name": "django-microservice-cluster",
+            "outpost_config": [],
+            "platform_version": "eks.9",
+            "remote_network_config": [],
+            "role_arn": "arn:aws:iam::343218225856:role/django-microservice-eks-cluster-role",
+            "status": "ACTIVE",
+            "storage_config": [],
+            "tags": {},
+            "upgrade_policy": [
+              {
+                "support_type": "EXTENDED"
+              }
+            ],
+            "version": "1.32",
+            "vpc_config": [
+              {
+                "cluster_security_group_id": "sg-0445014364575327e",
+                "endpoint_private_access": false,
+                "endpoint_public_access": true,
+                "public_access_cidrs": [
+                  "0.0.0.0/0"
+                ],
+                "security_group_ids": [
+                  "sg-0d24e750cd2a8bfa9"
+                ],
+                "subnet_ids": [
+                  "subnet-007825bc01cb51536",
+                  "subnet-05c1fad9d625903e9"
+                ],
+                "vpc_id": "vpc-0cfeb8699bca4d1fa"
+              }
+            ],
+            "zonal_shift_config": []
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_iam_role",
+      "name": "eks_cluster",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:iam::343218225856:role/django-microservice-eks-cluster-role",
+            "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"eks.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+            "create_date": "2025-05-06T15:35:26Z",
+            "description": "",
+            "id": "django-microservice-eks-cluster-role",
+            "max_session_duration": 3600,
+            "name": "django-microservice-eks-cluster-role",
+            "path": "/",
+            "permissions_boundary": "",
+            "role_last_used": [
+              {
+                "last_used_date": "2025-05-07T20:06:33Z",
+                "region": "us-east-1"
+              }
+            ],
+            "tags": {},
+            "unique_id": "AROAU72LGQLAO5MV6PMQR"
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_iam_role",
+      "name": "eks_node_group",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:iam::343218225856:role/django-microservice-eks-node-group-role",
+            "assume_role_policy": "{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"},\"Action\":\"sts:AssumeRole\"}]}",
+            "create_date": "2025-05-06T15:35:26Z",
+            "description": "",
+            "id": "django-microservice-eks-node-group-role",
+            "max_session_duration": 3600,
+            "name": "django-microservice-eks-node-group-role",
+            "path": "/",
+            "permissions_boundary": "",
+            "role_last_used": [
+              {
+                "last_used_date": "2025-05-07T20:02:31Z",
+                "region": "us-east-1"
+              }
+            ],
+            "tags": {},
+            "unique_id": "AROAU72LGQLAHNTPSIA2B"
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_security_group",
+      "name": "db",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:343218225856:security-group/sg-0009234c757b9e607",
+            "description": "Allow PostgreSQL and Redis inbound traffic",
+            "filter": [
+              {
+                "name": "group-name",
+                "values": [
+                  "allow-postgres-redis"
+                ]
+              },
+              {
+                "name": "vpc-id",
+                "values": [
+                  "vpc-0cfeb8699bca4d1fa"
+                ]
+              }
+            ],
+            "id": "sg-0009234c757b9e607",
+            "name": "allow-postgres-redis",
+            "tags": {},
+            "timeouts": null,
+            "vpc_id": "vpc-0cfeb8699bca4d1fa"
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_security_group",
+      "name": "eks_nodes",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:343218225856:security-group/sg-0d24e750cd2a8bfa9",
+            "description": "Allow EKS nodes access",
+            "filter": [
+              {
+                "name": "group-name",
+                "values": [
+                  "eks-nodes-sg"
+                ]
+              },
+              {
+                "name": "vpc-id",
+                "values": [
+                  "vpc-0cfeb8699bca4d1fa"
+                ]
+              }
+            ],
+            "id": "sg-0d24e750cd2a8bfa9",
+            "name": "eks-nodes-sg",
+            "tags": {},
+            "timeouts": null,
+            "vpc_id": "vpc-0cfeb8699bca4d1fa"
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "mode": "data",
+      "type": "aws_subnet",
+      "name": "existing_default_a",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:343218225856:subnet/subnet-05c1fad9d625903e9",
+            "assign_ipv6_address_on_creation": false,
+            "availability_zone": "us-east-1a",
+            "availability_zone_id": "use1-az2",
+            "available_ip_address_count": 4077,
+            "cidr_block": "172.31.80.0/20",
+            "customer_owned_ipv4_pool": "",
+            "default_for_az": true,
+            "enable_dns64": false,
+            "enable_lni_at_device_index": 0,
+            "enable_resource_name_dns_a_record_on_launch": false,
+            "enable_resource_name_dns_aaaa_record_on_launch": false,
+            "filter": null,
+            "id": "subnet-05c1fad9d625903e9",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_association_id": "",
+            "ipv6_native": false,
+            "map_customer_owned_ip_on_launch": false,
+            "map_public_ip_on_launch": true,
+            "outpost_arn": "",
+            "owner_id": "343218225856",
+            "private_dns_hostname_type_on_launch": "ip-name",
+            "state": "available",
+            "tags": {},
+            "timeouts": null,
+            "vpc_id": "vpc-0cfeb8699bca4d1fa"
+          },
+          "sensitive_attributes": []
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_default_subnet",
+      "name": "default_b",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:343218225856:subnet/subnet-007825bc01cb51536",
+            "assign_ipv6_address_on_creation": false,
+            "availability_zone": "us-east-1b",
+            "availability_zone_id": "use1-az4",
+            "cidr_block": "172.31.16.0/20",
+            "customer_owned_ipv4_pool": "",
+            "enable_dns64": false,
+            "enable_lni_at_device_index": 0,
+            "enable_resource_name_dns_a_record_on_launch": false,
+            "enable_resource_name_dns_aaaa_record_on_launch": false,
+            "existing_default_subnet": true,
+            "force_destroy": false,
+            "id": "subnet-007825bc01cb51536",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_association_id": "",
+            "ipv6_native": false,
+            "map_customer_owned_ip_on_launch": false,
+            "map_public_ip_on_launch": true,
+            "outpost_arn": "",
+            "owner_id": "343218225856",
+            "private_dns_hostname_type_on_launch": "ip-name",
+            "tags": {},
+            "tags_all": {},
+            "timeouts": null,
+            "vpc_id": "vpc-0cfeb8699bca4d1fa"
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDAsImRlbGV0ZSI6MTIwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMSJ9"
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_default_vpc",
+      "name": "default",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "arn": "arn:aws:ec2:us-east-1:343218225856:vpc/vpc-0cfeb8699bca4d1fa",
+            "assign_generated_ipv6_cidr_block": false,
+            "cidr_block": "172.31.0.0/16",
+            "default_network_acl_id": "acl-00d90b18516c225d5",
+            "default_route_table_id": "rtb-024cbc4d91f84ab19",
+            "default_security_group_id": "sg-0e22d6cbb1bc90b31",
+            "dhcp_options_id": "dopt-0291657db82c7c92d",
+            "enable_dns_hostnames": true,
+            "enable_dns_support": true,
+            "enable_network_address_usage_metrics": false,
+            "existing_default_vpc": true,
+            "force_destroy": false,
+            "id": "vpc-0cfeb8699bca4d1fa",
+            "instance_tenancy": "default",
+            "ipv6_association_id": "",
+            "ipv6_cidr_block": "",
+            "ipv6_cidr_block_network_border_group": "",
+            "ipv6_ipam_pool_id": "",
+            "ipv6_netmask_length": 0,
+            "main_route_table_id": "rtb-024cbc4d91f84ab19",
+            "owner_id": "343218225856",
+            "tags": {},
+            "tags_all": {}
+          },
+          "sensitive_attributes": [],
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ=="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_ecr_repository",
+      "name": "app",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:ecr:us-east-1:343218225856:repository/django-microservice",
+            "encryption_configuration": [
+              {
+                "encryption_type": "AES256",
+                "kms_key": ""
+              }
+            ],
+            "force_delete": null,
+            "id": "django-microservice",
+            "image_scanning_configuration": [
+              {
+                "scan_on_push": false
+              }
+            ],
+            "image_tag_mutability": "MUTABLE",
+            "name": "django-microservice",
+            "registry_id": "343218225856",
+            "repository_url": "343218225856.dkr.ecr.us-east-1.amazonaws.com/django-microservice",
+            "tags": {},
+            "tags_all": {},
+            "timeouts": null
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiZGVsZXRlIjoxMjAwMDAwMDAwMDAwfX0="
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_eks_node_group",
+      "name": "django_microservice",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "ami_type": "AL2023_x86_64_STANDARD",
+            "arn": "arn:aws:eks:us-east-1:343218225856:nodegroup/django-microservice-cluster/django-microservice-nodes/8ccb55e4-79a9-b823-0452-aa24f2e0308f",
+            "capacity_type": "ON_DEMAND",
+            "cluster_name": "django-microservice-cluster",
+            "disk_size": 20,
+            "force_update_version": null,
+            "id": "django-microservice-cluster:django-microservice-nodes",
+            "instance_types": [
+              "t3.medium"
+            ],
+            "labels": {},
+            "launch_template": [],
+            "node_group_name": "django-microservice-nodes",
+            "node_group_name_prefix": "",
+            "node_repair_config": [],
+            "node_role_arn": "arn:aws:iam::343218225856:role/django-microservice-eks-node-group-role",
+            "release_version": "1.32.3-20250501",
+            "remote_access": [],
+            "resources": [
+              {
+                "autoscaling_groups": [
+                  {
+                    "name": "eks-django-microservice-nodes-8ccb55e4-79a9-b823-0452-aa24f2e0308f"
+                  }
+                ],
+                "remote_access_security_group_id": ""
+              }
+            ],
+            "scaling_config": [
+              {
+                "desired_size": 2,
+                "max_size": 3,
+                "min_size": 1
+              }
+            ],
+            "status": "ACTIVE",
+            "subnet_ids": [
+              "subnet-007825bc01cb51536",
+              "subnet-05c1fad9d625903e9"
+            ],
+            "tags": {},
+            "tags_all": {},
+            "taint": [],
+            "timeouts": null,
+            "update_config": [
+              {
+                "max_unavailable": 1,
+                "max_unavailable_percentage": 0
+              }
+            ],
+            "version": "1.32"
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozNjAwMDAwMDAwMDAwLCJkZWxldGUiOjM2MDAwMDAwMDAwMDAsInVwZGF0ZSI6MzYwMDAwMDAwMDAwMH0sInNjaGVtYV92ZXJzaW9uIjoiMCJ9",
+          "dependencies": [
+            "aws_default_subnet.default_b",
+            "aws_iam_role_policy_attachment.ec2_container_registry_read_only",
+            "aws_iam_role_policy_attachment.eks_cluster_policy",
+            "aws_iam_role_policy_attachment.eks_cni_policy",
+            "aws_iam_role_policy_attachment.eks_vpc_resource_controller",
+            "aws_iam_role_policy_attachment.eks_worker_node_policy",
+            "data.aws_eks_cluster.django_microservice",
+            "data.aws_iam_role.eks_cluster",
+            "data.aws_iam_role.eks_node_group",
+            "data.aws_subnet.existing_default_a"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_iam_role",
+      "name": "ebs_csi_driver",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "arn": "arn:aws:iam::343218225856:role/django-microservice-ebs-csi-driver-role",
+            "assume_role_policy": "{\"Statement\":[{\"Action\":\"sts:AssumeRoleWithWebIdentity\",\"Condition\":{\"StringEquals\":{\"oidc.eks.us-east-1.amazonaws.com/id/FAEC8FE48DFE9055A7C102F2431A9C89:sub\":\"system:serviceaccount:kube-system:ebs-csi-controller-sa\"}},\"Effect\":\"Allow\",\"Principal\":{\"Federated\":\"arn:aws:iam::343218225856:oidc-provider/oidc.eks.us-east-1.amazonaws.com/id/FAEC8FE48DFE9055A7C102F2431A9C89\"}}],\"Version\":\"2012-10-17\"}",
+            "create_date": "2025-05-07T13:02:39Z",
+            "description": "",
+            "force_detach_policies": false,
+            "id": "django-microservice-ebs-csi-driver-role",
+            "inline_policy": [],
+            "managed_policy_arns": [
+              "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+            ],
+            "max_session_duration": 3600,
+            "name": "django-microservice-ebs-csi-driver-role",
+            "name_prefix": "",
+            "path": "/",
+            "permissions_boundary": "",
+            "tags": {},
+            "tags_all": {},
+            "unique_id": "AROAU72LGQLAHL473ZLNG"
+          },
+          "sensitive_attributes": [],
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjAifQ==",
+          "dependencies": [
+            "aws_iam_role_policy_attachment.eks_cluster_policy",
+            "aws_iam_role_policy_attachment.eks_vpc_resource_controller",
+            "data.aws_caller_identity.current",
+            "data.aws_eks_cluster.django_microservice",
+            "data.aws_iam_role.eks_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_iam_role_policy_attachment",
+      "name": "ebs_csi_policy",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "django-microservice-ebs-csi-driver-role-20250507195858718200000001",
+            "policy_arn": "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy",
+            "role": "django-microservice-ebs-csi-driver-role"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "aws_iam_role.ebs_csi_driver",
+            "aws_iam_role_policy_attachment.eks_cluster_policy",
+            "aws_iam_role_policy_attachment.eks_vpc_resource_controller",
+            "data.aws_caller_identity.current",
+            "data.aws_eks_cluster.django_microservice",
+            "data.aws_iam_role.eks_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_iam_role_policy_attachment",
+      "name": "ec2_container_registry_read_only",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "django-microservice-eks-node-group-role-20250507195431607000000005",
+            "policy_arn": "arn:aws:iam::aws:policy/AmazonEC2ContainerRegistryReadOnly",
+            "role": "django-microservice-eks-node-group-role"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.aws_iam_role.eks_node_group"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_iam_role_policy_attachment",
+      "name": "eks_cluster_policy",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "django-microservice-eks-cluster-role-20250507195431606900000003",
+            "policy_arn": "arn:aws:iam::aws:policy/AmazonEKSClusterPolicy",
+            "role": "django-microservice-eks-cluster-role"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.aws_iam_role.eks_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_iam_role_policy_attachment",
+      "name": "eks_cni_policy",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "django-microservice-eks-node-group-role-20250507195431606900000004",
+            "policy_arn": "arn:aws:iam::aws:policy/AmazonEKS_CNI_Policy",
+            "role": "django-microservice-eks-node-group-role"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.aws_iam_role.eks_node_group"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_iam_role_policy_attachment",
+      "name": "eks_vpc_resource_controller",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "django-microservice-eks-cluster-role-20250507195431431000000001",
+            "policy_arn": "arn:aws:iam::aws:policy/AmazonEKSVPCResourceController",
+            "role": "django-microservice-eks-cluster-role"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.aws_iam_role.eks_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "aws_iam_role_policy_attachment",
+      "name": "eks_worker_node_policy",
+      "provider": "provider[\"registry.terraform.io/hashicorp/aws\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "id": "django-microservice-eks-node-group-role-20250507195431606700000002",
+            "policy_arn": "arn:aws:iam::aws:policy/AmazonEKSWorkerNodePolicy",
+            "role": "django-microservice-eks-node-group-role"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "data.aws_iam_role.eks_node_group"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "helm_release",
+      "name": "ebs_csi_driver",
+      "provider": "provider[\"registry.terraform.io/hashicorp/helm\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "atomic": false,
+            "chart": "aws-ebs-csi-driver",
+            "cleanup_on_fail": false,
+            "create_namespace": false,
+            "dependency_update": false,
+            "description": null,
+            "devel": null,
+            "disable_crd_hooks": false,
+            "disable_openapi_validation": false,
+            "disable_webhooks": false,
+            "force_update": false,
+            "id": "aws-ebs-csi-driver",
+            "keyring": null,
+            "lint": false,
+            "manifest": null,
+            "max_history": 0,
+            "metadata": [
+              {
+                "app_version": "1.23.0",
+                "chart": "aws-ebs-csi-driver",
+                "first_deployed": 1746647946,
+                "last_deployed": 1746647946,
+                "name": "aws-ebs-csi-driver",
+                "namespace": "kube-system",
+                "notes": "To verify that aws-ebs-csi-driver has started, run:\n\n    kubectl get pod -n kube-system -l \"app.kubernetes.io/name=aws-ebs-csi-driver,app.kubernetes.io/instance=aws-ebs-csi-driver\"\n\nNOTE: The [CSI Snapshotter](https://github.com/kubernetes-csi/external-snapshotter) controller and CRDs will no longer be installed as part of this chart and moving forward will be a prerequisite of using the snap shotting functionality.",
+                "revision": 1,
+                "values": "{\"controller\":{\"serviceAccount\":{\"annotations\":{\"eks.amazonaws.com/role-arn\":\"arn:aws:iam::343218225856:role/django-microservice-ebs-csi-driver-role\"},\"create\":true,\"name\":\"ebs-csi-controller-sa\"}},\"enableDebugLogging\":true}",
+                "version": "2.23.0"
+              }
+            ],
+            "name": "aws-ebs-csi-driver",
+            "namespace": "kube-system",
+            "pass_credentials": false,
+            "postrender": [],
+            "recreate_pods": false,
+            "render_subchart_notes": true,
+            "replace": false,
+            "repository": "https://kubernetes-sigs.github.io/aws-ebs-csi-driver",
+            "repository_ca_file": null,
+            "repository_cert_file": null,
+            "repository_key_file": null,
+            "repository_password": null,
+            "repository_username": null,
+            "reset_values": false,
+            "reuse_values": false,
+            "set": [
+              {
+                "name": "controller.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn",
+                "type": "",
+                "value": "arn:aws:iam::343218225856:role/django-microservice-ebs-csi-driver-role"
+              },
+              {
+                "name": "controller.serviceAccount.create",
+                "type": "",
+                "value": "true"
+              },
+              {
+                "name": "controller.serviceAccount.name",
+                "type": "",
+                "value": "ebs-csi-controller-sa"
+              },
+              {
+                "name": "enableDebugLogging",
+                "type": "",
+                "value": "true"
+              }
+            ],
+            "set_list": [],
+            "set_sensitive": [],
+            "skip_crds": false,
+            "status": "deployed",
+            "timeout": 600,
+            "upgrade_install": null,
+            "values": null,
+            "verify": false,
+            "version": "2.23.0",
+            "wait": true,
+            "wait_for_jobs": false
+          },
+          "sensitive_attributes": [
+            [
+              {
+                "type": "get_attr",
+                "value": "repository_password"
+              }
+            ]
+          ],
+          "private": "eyJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "aws_default_subnet.default_b",
+            "aws_eks_node_group.django_microservice",
+            "aws_iam_role.ebs_csi_driver",
+            "aws_iam_role_policy_attachment.ec2_container_registry_read_only",
+            "aws_iam_role_policy_attachment.eks_cluster_policy",
+            "aws_iam_role_policy_attachment.eks_cni_policy",
+            "aws_iam_role_policy_attachment.eks_vpc_resource_controller",
+            "aws_iam_role_policy_attachment.eks_worker_node_policy",
+            "data.aws_caller_identity.current",
+            "data.aws_eks_cluster.django_microservice",
+            "data.aws_iam_role.eks_cluster",
+            "data.aws_iam_role.eks_node_group",
+            "data.aws_subnet.existing_default_a"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_persistent_volume_claim",
+      "name": "postgres_pvc",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "status": "tainted",
+          "schema_version": 0,
+          "attributes": {
+            "id": "default/postgres-pvc",
+            "metadata": [
+              {
+                "annotations": null,
+                "generate_name": "",
+                "generation": 0,
+                "labels": null,
+                "name": "postgres-pvc",
+                "namespace": "default",
+                "resource_version": "",
+                "uid": ""
+              }
+            ],
+            "spec": [
+              {
+                "access_modes": [
+                  "ReadWriteOnce"
+                ],
+                "resources": [
+                  {
+                    "limits": null,
+                    "requests": {
+                      "storage": "8Gi"
+                    }
+                  }
+                ],
+                "selector": [],
+                "storage_class_name": "gp2",
+                "volume_mode": "",
+                "volume_name": ""
+              }
+            ],
+            "timeouts": null,
+            "wait_until_bound": true
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjozMDAwMDAwMDAwMDB9fQ==",
+          "dependencies": [
+            "aws_default_subnet.default_b",
+            "aws_eks_node_group.django_microservice",
+            "aws_iam_role.ebs_csi_driver",
+            "aws_iam_role_policy_attachment.ec2_container_registry_read_only",
+            "aws_iam_role_policy_attachment.eks_cluster_policy",
+            "aws_iam_role_policy_attachment.eks_cni_policy",
+            "aws_iam_role_policy_attachment.eks_vpc_resource_controller",
+            "aws_iam_role_policy_attachment.eks_worker_node_policy",
+            "data.aws_caller_identity.current",
+            "data.aws_eks_cluster.django_microservice",
+            "data.aws_iam_role.eks_cluster",
+            "data.aws_iam_role.eks_node_group",
+            "data.aws_subnet.existing_default_a",
+            "helm_release.ebs_csi_driver",
+            "kubernetes_storage_class.gp2"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_service",
+      "name": "postgres_service",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 1,
+          "attributes": {
+            "id": "default/db",
+            "metadata": [
+              {
+                "annotations": {},
+                "generate_name": "",
+                "generation": 0,
+                "labels": {},
+                "name": "db",
+                "namespace": "default",
+                "resource_version": "8496",
+                "uid": "44d04efa-ddd5-4abb-a5d4-2bcf5e897c4a"
+              }
+            ],
+            "spec": [
+              {
+                "allocate_load_balancer_node_ports": true,
+                "cluster_ip": "10.100.219.99",
+                "cluster_ips": [
+                  "10.100.219.99"
+                ],
+                "external_ips": [],
+                "external_name": "",
+                "external_traffic_policy": "",
+                "health_check_node_port": 0,
+                "internal_traffic_policy": "Cluster",
+                "ip_families": [
+                  "IPv4"
+                ],
+                "ip_family_policy": "SingleStack",
+                "load_balancer_class": "",
+                "load_balancer_ip": "",
+                "load_balancer_source_ranges": [],
+                "port": [
+                  {
+                    "app_protocol": "",
+                    "name": "",
+                    "node_port": 0,
+                    "port": 5432,
+                    "protocol": "TCP",
+                    "target_port": "5432"
+                  }
+                ],
+                "publish_not_ready_addresses": false,
+                "selector": {
+                  "app": "postgres"
+                },
+                "session_affinity": "None",
+                "session_affinity_config": [],
+                "type": "ClusterIP"
+              }
+            ],
+            "status": [
+              {
+                "load_balancer": [
+                  {
+                    "ingress": []
+                  }
+                ]
+              }
+            ],
+            "timeouts": null,
+            "wait_for_load_balancer": true
+          },
+          "sensitive_attributes": [],
+          "private": "eyJlMmJmYjczMC1lY2FhLTExZTYtOGY4OC0zNDM2M2JjN2M0YzAiOnsiY3JlYXRlIjo2MDAwMDAwMDAwMDB9LCJzY2hlbWFfdmVyc2lvbiI6IjEifQ==",
+          "dependencies": [
+            "aws_iam_role_policy_attachment.eks_cluster_policy",
+            "aws_iam_role_policy_attachment.eks_vpc_resource_controller",
+            "data.aws_eks_cluster.django_microservice",
+            "data.aws_iam_role.eks_cluster"
+          ]
+        }
+      ]
+    },
+    {
+      "mode": "managed",
+      "type": "kubernetes_storage_class",
+      "name": "gp2",
+      "provider": "provider[\"registry.terraform.io/hashicorp/kubernetes\"]",
+      "instances": [
+        {
+          "schema_version": 0,
+          "attributes": {
+            "allow_volume_expansion": true,
+            "allowed_topologies": [],
+            "id": "gp2",
+            "metadata": [
+              {
+                "annotations": {
+                  "storageclass.kubernetes.io/is-default-class": "true"
+                },
+                "generate_name": "",
+                "generation": 0,
+                "labels": {},
+                "name": "gp2",
+                "resource_version": "292866",
+                "uid": "81cfdc63-40f0-4401-9c85-30b07c90edd4"
+              }
+            ],
+            "mount_options": [],
+            "parameters": {
+              "type": "gp3"
+            },
+            "reclaim_policy": "Delete",
+            "storage_provisioner": "ebs.csi.aws.com",
+            "volume_binding_mode": "WaitForFirstConsumer"
+          },
+          "sensitive_attributes": [],
+          "private": "bnVsbA==",
+          "dependencies": [
+            "aws_default_subnet.default_b",
+            "aws_eks_node_group.django_microservice",
+            "aws_iam_role.ebs_csi_driver",
+            "aws_iam_role_policy_attachment.ec2_container_registry_read_only",
+            "aws_iam_role_policy_attachment.eks_cluster_policy",
+            "aws_iam_role_policy_attachment.eks_cni_policy",
+            "aws_iam_role_policy_attachment.eks_vpc_resource_controller",
+            "aws_iam_role_policy_attachment.eks_worker_node_policy",
+            "data.aws_caller_identity.current",
+            "data.aws_eks_cluster.django_microservice",
+            "data.aws_iam_role.eks_cluster",
+            "data.aws_iam_role.eks_node_group",
+            "data.aws_subnet.existing_default_a",
+            "helm_release.ebs_csi_driver"
+          ]
+        }
+      ]
+    }
+  ],
+  "check_results": null
+}

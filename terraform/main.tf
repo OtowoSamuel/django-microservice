@@ -106,6 +106,17 @@ data "aws_eks_cluster" "django_microservice" {
   ]
 }
 
+# Add OIDC Provider for the EKS cluster - required for IAM Roles for Service Accounts (IRSA)
+data "tls_certificate" "eks" {
+  url = data.aws_eks_cluster.django_microservice.identity[0].oidc[0].issuer
+}
+
+resource "aws_iam_openid_connect_provider" "eks" {
+  client_id_list  = ["sts.amazonaws.com"]
+  thumbprint_list = [data.tls_certificate.eks.certificates[0].sha1_fingerprint]
+  url             = data.aws_eks_cluster.django_microservice.identity[0].oidc[0].issuer
+}
+
 # Data source to reference the existing EKS node group IAM role
 data "aws_iam_role" "eks_node_group" {
   name = "django-microservice-eks-node-group-role"
@@ -186,7 +197,7 @@ resource "helm_release" "ebs_csi_driver" {
   name       = "aws-ebs-csi-driver"
   repository = "https://kubernetes-sigs.github.io/aws-ebs-csi-driver"
   chart      = "aws-ebs-csi-driver"
-  version    = "2.23.0"
+  version    = "2.27.0" # Updated version for K8s 1.28 compatibility (deploys driver v1.27.0)
   namespace  = "kube-system"
 
   set {
@@ -205,15 +216,131 @@ resource "helm_release" "ebs_csi_driver" {
   }
 
   set {
-    name  = "enableDebugLogging"
+    name  = "enableDebugLogging" # Keep this true for now, can be set to false later
     value = "true"
   }
 
-  timeout = 600
+  # Set AWS_REGION for controller pods - Corrected structure
+  set {
+    name  = "controller.env[0].name"
+    value = "AWS_REGION"
+  }
+  set {
+    name  = "controller.env[0].value"
+    value = var.region
+  }
+
+  # Set AWS_REGION for node pods - Corrected structure
+  set {
+    name  = "node.env[0].name"
+    value = "AWS_REGION"
+  }
+  set {
+    name  = "node.env[0].value"
+    value = var.region
+  }
+
+  # Increased resources for controller components
+  # ebs-plugin
+  set {
+    name  = "controller.ebsPlugin.resources.requests.cpu"
+    value = "50m"
+  }
+  set {
+    name  = "controller.ebsPlugin.resources.requests.memory"
+    value = "100Mi"
+  }
+  set {
+    name  = "controller.ebsPlugin.resources.limits.memory"
+    value = "512Mi"
+  }
+  # csi-provisioner
+  set {
+    name  = "controller.provisioner.resources.requests.cpu"
+    value = "25m"
+  }
+  set {
+    name  = "controller.provisioner.resources.requests.memory"
+    value = "50Mi"
+  }
+  set {
+    name  = "controller.provisioner.resources.limits.memory"
+    value = "256Mi"
+  }
+  # csi-attacher
+  set {
+    name  = "controller.attacher.resources.requests.cpu"
+    value = "25m"
+  }
+  set {
+    name  = "controller.attacher.resources.requests.memory"
+    value = "50Mi"
+  }
+  set {
+    name  = "controller.attacher.resources.limits.memory"
+    value = "256Mi"
+  }
+  # csi-resizer
+  set {
+    name  = "controller.resizer.resources.requests.cpu"
+    value = "25m"
+  }
+  set {
+    name  = "controller.resizer.resources.requests.memory"
+    value = "50Mi"
+  }
+  set {
+    name  = "controller.resizer.resources.limits.memory"
+    value = "256Mi"
+  }
+  # liveness-probe (for controller)
+  set {
+    name  = "controller.livenessProbe.resources.requests.cpu"
+    value = "25m"
+  }
+  set {
+    name  = "controller.livenessProbe.resources.requests.memory"
+    value = "50Mi"
+  }
+  set {
+    name  = "controller.livenessProbe.resources.limits.memory"
+    value = "256Mi"
+  }
+
+  # Increased resources for node components (optional, but good for consistency)
+  # ebs-plugin on node
+  set {
+    name  = "node.ebsPlugin.resources.requests.cpu"
+    value = "50m"
+  }
+  set {
+    name  = "node.ebsPlugin.resources.requests.memory"
+    value = "100Mi"
+  }
+  set {
+    name  = "node.ebsPlugin.resources.limits.memory"
+    value = "512Mi"
+  }
+  # liveness-probe on node
+  set {
+    name  = "node.livenessProbe.resources.requests.cpu"
+    value = "25m"
+  }
+  set {
+    name  = "node.livenessProbe.resources.requests.memory"
+    value = "50Mi"
+  }
+  set {
+    name  = "node.livenessProbe.resources.limits.memory"
+    value = "256Mi"
+  }
+
+  timeout = 900 # Increased helm release timeout
   wait    = true
 
   depends_on = [
-    aws_eks_node_group.django_microservice
+    aws_eks_node_group.django_microservice,
+    aws_iam_role_policy_attachment.ebs_csi_policy # Ensure role and policy are set up first
   ]
 }
 
@@ -221,6 +348,9 @@ resource "helm_release" "ebs_csi_driver" {
 resource "kubernetes_storage_class" "gp2" {
   metadata {
     name = "gp2"
+    annotations = {
+      "storageclass.kubernetes.io/is-default-class" = "true"
+    }
   }
   storage_provisioner = "ebs.csi.aws.com"
   reclaim_policy      = "Delete"
@@ -250,6 +380,12 @@ resource "kubernetes_persistent_volume_claim" "postgres_pvc" {
     storage_class_name = "gp2"
   }
 
+  wait_until_bound = false  # Don't make Terraform wait for the PVC to be fully bound
+
+  timeouts {
+    create = "20m" # Increased timeout for PVC creation
+  }
+
   depends_on = [
     kubernetes_storage_class.gp2
   ]
@@ -272,6 +408,62 @@ resource "kubernetes_service" "postgres_service" {
     }
     type = "ClusterIP"
   }
+}
+
+# Add GitHub Actions IAM User and role for CI/CD
+resource "aws_iam_user" "github_actions" {
+  name = "github-actions-user"
+}
+
+resource "aws_iam_access_key" "github_actions" {
+  user = aws_iam_user.github_actions.name
+}
+
+data "aws_iam_policy_document" "github_actions_policy_document" {
+  statement {
+    actions = [
+      "ecr:GetAuthorizationToken",
+      "ecr:BatchCheckLayerAvailability",
+      "ecr:GetDownloadUrlForLayer",
+      "ecr:BatchGetImage",
+      "ecr:InitiateLayerUpload",
+      "ecr:UploadLayerPart",
+      "ecr:CompleteLayerUpload",
+      "ecr:PutImage"
+    ]
+    resources = ["*"]
+  }
+  
+  statement {
+    actions = [
+      "eks:DescribeCluster",
+      "eks:ListClusters"
+    ]
+    resources = ["*"]
+  }
+}
+
+resource "aws_iam_policy" "github_actions_policy" {
+  name        = "github-actions-policy"
+  description = "Policy for GitHub Actions to push to ECR and update EKS"
+  policy      = data.aws_iam_policy_document.github_actions_policy_document.json
+}
+
+resource "aws_iam_user_policy_attachment" "github_actions_attachment" {
+  user       = aws_iam_user.github_actions.name
+  policy_arn = aws_iam_policy.github_actions_policy.arn
+}
+
+# Output the GitHub Actions user access key and secret
+# (these should be added as secrets to your GitHub repository)
+output "github_actions_aws_access_key_id" {
+  value     = aws_iam_access_key.github_actions.id
+  sensitive = true
+}
+
+output "github_actions_aws_secret_access_key" {
+  value     = aws_iam_access_key.github_actions.secret
+  sensitive = true
 }
 
 data "aws_caller_identity" "current" {}
