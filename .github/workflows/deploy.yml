@@ -22,9 +22,10 @@ jobs:
           unzip awscliv2.zip
           sudo ./aws/install --update
           aws --version
+        continue-on-error: false
 
       - name: Configure AWS Credentials
-        uses: aws-actions/configure-aws-credentials@v3
+        uses: aws-actions/configure-aws-credentials@v4
         with:
           aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
@@ -48,8 +49,14 @@ jobs:
           # Check if the node group is already in Terraform state
           if ! terraform state show aws_eks_node_group.django_microservice >/dev/null 2>&1; then
             echo "Importing existing EKS node group..."
-            terraform import aws_eks_node_group.django_microservice django-microservice-cluster:django-microservice-nodes
-            terraform state list
+            if terraform import aws_eks_node_group.django_microservice django-microservice-cluster:django-microservice-nodes; then
+              echo "Import successful"
+              terraform state list
+            else
+              echo "Import failed. Listing available node groups..."
+              aws eks list-nodegroups --cluster-name django-microservice-cluster --region ${{ secrets.AWS_REGION }}
+              exit 1
+            fi
           else
             echo "EKS node group already in Terraform state"
             terraform state list
@@ -63,7 +70,7 @@ jobs:
         run: |
           terraform apply -auto-approve \
             -var="region=${{ secrets.AWS_REGION }}" \
-            -json > terraform-apply.log
+            -json > terraform-apply.log 2>&1 || (cat terraform-apply.log && exit 1)
           cat terraform-apply.log
         working-directory: ./terraform
         env:
@@ -83,6 +90,10 @@ jobs:
 
       - name: Update Kubeconfig
         run: |
+          aws --version
+          echo "Listing EKS clusters in region ${{ secrets.AWS_REGION }}..."
+          aws eks list-clusters --region ${{ secrets.AWS_REGION }}
+          echo "Updating kubeconfig for cluster django-microservice-cluster..."
           aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name django-microservice-cluster
           kubectl config current-context
           kubectl cluster-info
@@ -136,12 +147,13 @@ jobs:
       - name: Debug on failure
         if: failure()
         run: |
-          kubectl get pods -n kube-system
-          kubectl get pods -n default
-          kubectl describe pod -l app=postgres -n default
-          kubectl describe pod -l app=django-app,component=web -n default
-          kubectl logs -l app=django-app,component=web -n default
-          kubectl describe pvc postgres-pvc -n default
-          kubectl get events -n default
-          kubectl get configmap -n kube-system -l "owner=helm"
-          cat terraform/terraform-apply.log
+          kubectl get pods -n kube-system || echo "kubectl failed"
+          kubectl get pods -n default || echo "kubectl failed"
+          kubectl describe pod -l app=postgres -n default || echo "kubectl failed"
+          kubectl describe pod -l app=django-app,component=web -n default || echo "kubectl failed"
+          kubectl logs -l app=django-app,component=web -n default || echo "kubectl failed"
+          kubectl describe pvc postgres-pvc -n default || echo "kubectl failed"
+          kubectl get events -n default || echo "kubectl failed"
+          kubectl get configmap -n kube-system -l "owner=helm" || echo "kubectl failed"
+          cat terraform/terraform-apply.log || echo "Terraform log not found"
+          aws eks describe-cluster --name django-microservice-cluster --region ${{ secrets.AWS_REGION }} || echo "AWS CLI failed"
