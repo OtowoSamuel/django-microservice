@@ -3,38 +3,14 @@ provider "aws" {
 }
 
 provider "kubernetes" {
-  host                   = data.aws_eks_cluster.django_microservice.endpoint
-  cluster_ca_certificate = base64decode(data.aws_eks_cluster.django_microservice.certificate_authority[0].data)
-  exec {
-    api_version = "client.authentication.k8s.io/v1beta1"
-    command     = "aws"
-    args        = [
-      "eks",
-      "get-token",
-      "--cluster-name",
-      data.aws_eks_cluster.django_microservice.name,
-      "--region",
-      var.region
-    ]
-  }
+  config_path = "~/.kube/config"  # Use local kubeconfig file
+  config_context = "arn:aws:eks:${var.region}:${data.aws_caller_identity.current.account_id}:cluster/django-microservice-cluster"
 }
 
 provider "helm" {
   kubernetes {
-    host                   = data.aws_eks_cluster.django_microservice.endpoint
-    cluster_ca_certificate = base64decode(data.aws_eks_cluster.django_microservice.certificate_authority[0].data)
-    exec {
-      api_version = "client.authentication.k8s.io/v1beta1"
-      command     = "aws"
-      args        = [
-        "eks",
-        "get-token",
-        "--cluster-name",
-        data.aws_eks_cluster.django_microservice.name,
-        "--region",
-        var.region
-      ]
-    }
+    config_path = "~/.kube/config"  # Use local kubeconfig file
+    config_context = "arn:aws:eks:${var.region}:${data.aws_caller_identity.current.account_id}:cluster/django-microservice-cluster"
   }
 }
 
