@@ -2,7 +2,23 @@ provider "aws" {
   region = var.region
 }
 
-# Helm provider with robust configuration
+provider "kubernetes" {
+  host                   = data.aws_eks_cluster.django_microservice.endpoint
+  cluster_ca_certificate = base64decode(data.aws_eks_cluster.django_microservice.certificate_authority[0].data)
+  exec {
+    api_version = "client.authentication.k8s.io/v1beta1"
+    command     = "aws"
+    args        = [
+      "eks",
+      "get-token",
+      "--cluster-name",
+      data.aws_eks_cluster.django_microservice.name,
+      "--region",
+      var.region
+    ]
+  }
+}
+
 provider "helm" {
   kubernetes {
     host                   = data.aws_eks_cluster.django_microservice.endpoint
