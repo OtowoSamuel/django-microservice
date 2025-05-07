@@ -2,6 +2,26 @@ provider "aws" {
   region = var.region
 }
 
+# Helm provider with robust configuration
+provider "helm" {
+  kubernetes {
+    host                   = data.aws_eks_cluster.django_microservice.endpoint
+    cluster_ca_certificate = base64decode(data.aws_eks_cluster.django_microservice.certificate_authority[0].data)
+    exec {
+      api_version = "client.authentication.k8s.io/v1beta1"
+      command     = "aws"
+      args        = [
+        "eks",
+        "get-token",
+        "--cluster-name",
+        data.aws_eks_cluster.django_microservice.name,
+        "--region",
+        var.region
+      ]
+    }
+  }
+}
+
 # Reference the existing default VPC
 resource "aws_default_vpc" "default" {}
 
@@ -115,6 +135,130 @@ resource "aws_eks_node_group" "django_microservice" {
     aws_iam_role_policy_attachment.ec2_container_registry_read_only
   ]
 }
+
+# IAM role for EBS CSI driver
+resource "aws_iam_role" "ebs_csi_driver" {
+  name = "django-microservice-ebs-csi-driver-role"
+
+  assume_role_policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [
+      {
+        Effect = "Allow"
+        Principal = {
+          Federated = "arn:aws:iam::${data.aws_caller_identity.current.account_id}:oidc-provider/oidc.eks.${var.region}.amazonaws.com/id/${basename(data.aws_eks_cluster.django_microservice.identity[0].oidc[0].issuer)}"
+        }
+        Action = "sts:AssumeRoleWithWebIdentity"
+        Condition = {
+          StringEquals = {
+            "oidc.eks.${var.region}.amazonaws.com/id/${basename(data.aws_eks_cluster.django_microservice.identity[0].oidc[0].issuer)}:sub" = "system:serviceaccount:kube-system:ebs-csi-controller-sa"
+          }
+        }
+      }
+    ]
+  })
+}
+
+# Attach EBS CSI policy to the role
+resource "aws_iam_role_policy_attachment" "ebs_csi_policy" {
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AmazonEBSCSIDriverPolicy"
+  role       = aws_iam_role.ebs_csi_driver.name
+}
+
+# Install AWS EBS CSI driver via Helm
+resource "helm_release" "ebs_csi_driver" {
+  name       = "aws-ebs-csi-driver"
+  repository = "https://kubernetes-sigs.github.io/aws-ebs-csi-driver"
+  chart      = "aws-ebs-csi-driver"
+  version    = "2.23.0"
+  namespace  = "kube-system"
+
+  set {
+    name  = "controller.serviceAccount.create"
+    value = "true"
+  }
+
+  set {
+    name  = "controller.serviceAccount.name"
+    value = "ebs-csi-controller-sa"
+  }
+
+  set {
+    name  = "controller.serviceAccount.annotations.eks\\.amazonaws\\.com/role-arn"
+    value = aws_iam_role.ebs_csi_driver.arn
+  }
+
+  set {
+    name  = "enableDebugLogging"
+    value = "true"
+  }
+
+  timeout = 600
+  wait    = true
+
+  depends_on = [
+    aws_eks_node_group.django_microservice
+  ]
+}
+
+# Define gp2 StorageClass
+resource "kubernetes_storage_class" "gp2" {
+  metadata {
+    name = "gp2"
+  }
+  storage_provisioner = "ebs.csi.aws.com"
+  reclaim_policy      = "Delete"
+  volume_binding_mode = "WaitForFirstConsumer"
+  parameters = {
+    type = "gp3"
+  }
+
+  depends_on = [
+    helm_release.ebs_csi_driver
+  ]
+}
+
+# Define Postgres PVC
+resource "kubernetes_persistent_volume_claim" "postgres_pvc" {
+  metadata {
+    name      = "postgres-pvc"
+    namespace = "default"
+  }
+  spec {
+    access_modes = ["ReadWriteOnce"]
+    resources {
+      requests = {
+        storage = "8Gi"
+      }
+    }
+    storage_class_name = "gp2"
+  }
+
+  depends_on = [
+    kubernetes_storage_class.gp2
+  ]
+}
+
+# Define Postgres Service
+resource "kubernetes_service" "postgres_service" {
+  metadata {
+    name      = "db"
+    namespace = "default"
+  }
+  spec {
+    selector = {
+      app = "postgres"
+    }
+    port {
+      protocol    = "TCP"
+      port        = 5432
+      target_port = 5432
+    }
+    type = "ClusterIP"
+  }
+}
+
+data "aws_caller_identity" "current" {}
 
 output "ecr_repository_url" {
   value = data.aws_ecr_repository.app.repository_url
