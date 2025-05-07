@@ -161,5 +161,4 @@ jobs:
           kubectl get configmap -n kube-system -l "owner=helm" || echo "kubectl failed"
           cat terraform/terraform-plan.log || echo "Terraform plan log not found"
           cat terraform/terraform-apply.log || echo "Terraform apply log not found"
-          aws eks describe-cluster --name django-microservice-cluster --region ${{ secrets.AWS_REGION }} || echo "AWS CLI failed"
-          
+          aws eks describe-cluster --name django-microservice-cluster --region ${{ secrets.AWS_REGION }} || echo "AWS CLI failed" 
