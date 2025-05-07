@@ -20,7 +20,7 @@ jobs:
         run: |
           curl "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip"
           unzip awscliv2.zip
-          sudo ./aws/install
+          sudo ./aws/install --update
           aws --version
 
       - name: Configure AWS Credentials
@@ -49,8 +49,10 @@ jobs:
           if ! terraform state show aws_eks_node_group.django_microservice >/dev/null 2>&1; then
             echo "Importing existing EKS node group..."
             terraform import aws_eks_node_group.django_microservice django-microservice-cluster:django-microservice-nodes
+            terraform state list
           else
             echo "EKS node group already in Terraform state"
+            terraform state list
           fi
         working-directory: ./terraform
         env:
@@ -83,6 +85,7 @@ jobs:
         run: |
           aws eks --region ${{ secrets.AWS_REGION }} update-kubeconfig --name django-microservice-cluster
           kubectl config current-context
+          kubectl cluster-info
         env:
           AWS_ACCESS_KEY_ID: ${{ secrets.AWS_ACCESS_KEY_ID }}
           AWS_SECRET_ACCESS_KEY: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
