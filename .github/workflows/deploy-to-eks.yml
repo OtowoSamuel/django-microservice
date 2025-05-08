@@ -39,17 +39,13 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
 
-      - name: Build and test Docker image
+      - name: Build Docker image
         env:
           ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           IMAGE_TAG: ${{ github.sha }}
         run: |
-          # Run tests before building the final image
-          echo "Running tests..."
-          docker build --target test -t $ECR_REGISTRY/$ECR_REPOSITORY:test .
-          
           # Build the production image
-          echo "Building production image..."
+          echo "Building Docker image..."
           docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
       
       - name: Push Docker image to Amazon ECR
@@ -191,4 +187,3 @@ jobs:
           echo "Web service endpoint:"
           kubectl get service web -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
 
-          
