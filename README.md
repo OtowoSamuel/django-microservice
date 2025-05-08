@@ -2,6 +2,23 @@
 
 A Django-based microservice that provides a REST API for background task processing, deployed on AWS using EKS, Docker, and CI/CD principles.
 
+## Live Deployment
+
+The application is currently deployed and accessible at:
+- API: http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/api/
+- API Documentation: http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/swagger/
+
+You can test the API using the Swagger UI or with curl:
+```bash
+# Create a new task
+curl -X POST -H "Content-Type: application/json" \
+  -d '{"email": "test@example.com", "message": "Hello from the API!"}' \
+  http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/api/process/
+
+# Check task status (replace TASK_ID with the ID received from the previous call)
+curl http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/api/status/TASK_ID/
+```
+
 ## Architecture Overview
 
 This application is built as a microservice architecture with the following components:
