@@ -74,32 +74,51 @@ jobs:
         run: |
           echo "Checking if PostgreSQL is running..."
           kubectl get pods -l app=postgres
-          POSTGRES_STATUS=$(kubectl get pods -l app=postgres -o json | jq -r '.items[0].status.phase')
-          echo "PostgreSQL status: $POSTGRES_STATUS"
-          if [ "$POSTGRES_STATUS" != "Running" ]; then
-            echo "PostgreSQL is not running. Checking pod details..."
-            kubectl describe pods -l app=postgres
-          fi
+          kubectl get services db
+          echo "PostgreSQL service details:"
+          kubectl describe services db
+
+      - name: Get current deployments
+        run: |
+          echo "Current deployments:"
+          kubectl get deployments
+          
+          echo "Current services:"
+          kubectl get services
       
       - name: Deploy to Kubernetes
         run: |
-          # Update web deployment with the new image
-          echo "Updating web deployment..."
-          kubectl set image deployment/web web=${{ steps.push-image.outputs.image }}
+          # First check if web or django-service deployment exists
+          if kubectl get deployment web &>/dev/null; then
+            DEPLOYMENT_NAME=web
+          elif kubectl get deployment django-service &>/dev/null; then
+            DEPLOYMENT_NAME=django-service
+          else
+            echo "Neither web nor django-service deployment found, creating web deployment..."
+            DEPLOYMENT_NAME=web
+            # Create deployment if it doesn't exist
+            kubectl create deployment web --image=${{ steps.push-image.outputs.image }}
+          fi
+          
+          echo "Updating $DEPLOYMENT_NAME deployment with the new image..."
+          kubectl set image deployment/$DEPLOYMENT_NAME $DEPLOYMENT_NAME=${{ steps.push-image.outputs.image }}
           
           # Update worker deployment with the new image
           echo "Updating worker deployment..."
           kubectl set image deployment/worker worker=${{ steps.push-image.outputs.image }}
           
           # Wait for rollout to complete
-          echo "Waiting for web deployment rollout to complete..."
-          kubectl rollout status deployment/web --timeout=180s
+          echo "Waiting for $DEPLOYMENT_NAME deployment rollout to complete..."
+          kubectl rollout status deployment/$DEPLOYMENT_NAME --timeout=180s
           
           echo "Waiting for worker deployment rollout to complete..."
           kubectl rollout status deployment/worker --timeout=180s
 
       - name: Apply database migrations
         run: |
+          # Get database credentials from the db service
+          DB_HOST=$(kubectl get service db -o jsonpath='{.spec.clusterIP}')
+          
           # Create a temporary pod to run migrations
           echo "Creating migration job..."
           cat <<EOF | kubectl apply -f -
@@ -117,36 +136,36 @@ jobs:
                 - name: check-db-ready
                   image: postgres:15-alpine
                   command: ['sh', '-c', 
-                    'until pg_isready -h ${{ secrets.DB_HOST }} -p ${{ secrets.DB_PORT }}; do echo waiting for database; sleep 2; done;']
+                    'until pg_isready -h $DB_HOST -p 5432; do echo waiting for database; sleep 2; done;']
                 containers:
                 - name: django
                   image: ${{ steps.push-image.outputs.image }}
                   command: ["python", "manage.py", "migrate", "--noinput"]
                   env:
                   - name: DB_NAME
-                    value: "${{ secrets.DB_NAME }}"
+                    value: "django_db"
                   - name: DB_USER
-                    value: "${{ secrets.DB_USER }}"
+                    value: "postgres"
                   - name: DB_PASSWORD
-                    value: "${{ secrets.DB_PASSWORD }}"
+                    value: "postgres"
                   - name: DB_HOST
-                    value: "${{ secrets.DB_HOST }}"
+                    value: "$DB_HOST"
                   - name: DB_PORT
-                    value: "${{ secrets.DB_PORT }}"
+                    value: "5432"
                   - name: SECRET_KEY
                     value: "${{ secrets.SECRET_KEY }}"
                   - name: DEBUG
                     value: "false"
                   - name: CELERY_BROKER_URL
-                    value: "${{ secrets.CELERY_BROKER_URL }}"
+                    value: "redis://redis-service:6379/0"
                   - name: CELERY_RESULT_BACKEND
-                    value: "${{ secrets.CELERY_RESULT_BACKEND }}"
+                    value: "redis://redis-service:6379/0"
                 restartPolicy: Never
           EOF
           
           # Wait for migration job to complete
           echo "Waiting for migrations to complete..."
-          kubectl wait --for=condition=complete job/django-migrate-${{ github.sha }} --timeout=120s || true
+          kubectl wait --for=condition=complete job/django-migrate-${{ github.sha }} --timeout=180s || true
           
           # Get logs from the job
           echo "Migration logs:"
@@ -154,27 +173,39 @@ jobs:
 
       - name: Update environment variables in deployments
         run: |
+          # Get service name for web deployment
+          if kubectl get deployment web &>/dev/null; then
+            DEPLOYMENT_NAME=web
+          elif kubectl get deployment django-service &>/dev/null; then
+            DEPLOYMENT_NAME=django-service
+          fi
+          
+          # Get database credentials from the db service
+          DB_HOST=$(kubectl get service db -o jsonpath='{.spec.clusterIP}')
+          
           # Update web deployment with environment variables
-          kubectl set env deployment/web \
-            DB_NAME="${{ secrets.DB_NAME }}" \
-            DB_USER="${{ secrets.DB_USER }}" \
-            DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
-            DB_HOST="${{ secrets.DB_HOST }}" \
-            DB_PORT="${{ secrets.DB_PORT }}" \
+          kubectl set env deployment/$DEPLOYMENT_NAME \
+            DB_NAME="django_db" \
+            DB_USER="postgres" \
+            DB_PASSWORD="postgres" \
+            DB_HOST="$DB_HOST" \
+            DB_PORT="5432" \
             SECRET_KEY="${{ secrets.SECRET_KEY }}" \
-            CELERY_BROKER_URL="${{ secrets.CELERY_BROKER_URL }}" \
-            CELERY_RESULT_BACKEND="${{ secrets.CELERY_RESULT_BACKEND }}"
+            CELERY_BROKER_URL="redis://redis-service:6379/0" \
+            CELERY_RESULT_BACKEND="redis://redis-service:6379/0" \
+            DEBUG="false"
             
           # Update worker deployment with environment variables
           kubectl set env deployment/worker \
-            DB_NAME="${{ secrets.DB_NAME }}" \
-            DB_USER="${{ secrets.DB_USER }}" \
-            DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
-            DB_HOST="${{ secrets.DB_HOST }}" \
-            DB_PORT="${{ secrets.DB_PORT }}" \
+            DB_NAME="django_db" \
+            DB_USER="postgres" \
+            DB_PASSWORD="postgres" \
+            DB_HOST="$DB_HOST" \
+            DB_PORT="5432" \
             SECRET_KEY="${{ secrets.SECRET_KEY }}" \
-            CELERY_BROKER_URL="${{ secrets.CELERY_BROKER_URL }}" \
-            CELERY_RESULT_BACKEND="${{ secrets.CELERY_RESULT_BACKEND }}"
+            CELERY_BROKER_URL="redis://redis-service:6379/0" \
+            CELERY_RESULT_BACKEND="redis://redis-service:6379/0" \
+            DEBUG="false"
 
       - name: Verify deployment
         run: |
@@ -184,6 +215,14 @@ jobs:
           echo "Checking services:"
           kubectl get services
           
-          echo "Web service endpoint:"
-          kubectl get service web -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+          # Check if web service exists, if not check django-service
+          if kubectl get service web &>/dev/null; then
+            echo "Web service endpoint:"
+            kubectl get service web -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+          elif kubectl get service django-service &>/dev/null; then
+            echo "Django service endpoint:"
+            kubectl get service django-service -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+          else
+            echo "No web or django-service service found"
+          fi
 
