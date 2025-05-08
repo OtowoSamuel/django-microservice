@@ -4,20 +4,40 @@ A Django-based microservice that provides a REST API for background task process
 
 ## Live Deployment
 
-The application is currently deployed and accessible at:
+The application is currently deployed on AWS EKS at:
 - API: http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/api/
 - API Documentation: http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/swagger/
 
-You can test the API using the Swagger UI or with curl:
+**Important**: The API requires token authentication. To access the API, use the following authentication token:
+
+```
+Token a2646fef3ce417ecba425253834db1313d2d463a
+```
+
+### Testing the API with Authentication
+
+You can test the API using curl with the authentication token:
+
 ```bash
 # Create a new task
 curl -X POST -H "Content-Type: application/json" \
+  -H "Authorization: Token a2646fef3ce417ecba425253834db1313d2d463a" \
   -d '{"email": "test@example.com", "message": "Hello from the API!"}' \
   http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/api/process/
 
 # Check task status (replace TASK_ID with the ID received from the previous call)
-curl http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/api/status/TASK_ID/
+curl -H "Authorization: Token a2646fef3ce417ecba425253834db1313d2d463a" \
+  http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/api/status/TASK_ID/
 ```
+
+### Swagger UI Authentication
+
+To use the Swagger UI documentation:
+1. Open http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/swagger/
+2. Click the "Authorize" button
+3. Enter the token: `Token a2646fef3ce417ecba425253834db1313d2d463a`
+4. Click "Authorize" and close the dialog
+5. Now you can test the API endpoints directly from the Swagger UI
 
 ## Architecture Overview
 
@@ -82,6 +102,38 @@ The API is documented using Swagger/OpenAPI and can be accessed at `/swagger/` w
        "result": "Task processed successfully"
      }
      ```
+
+### Authentication
+
+The API uses token-based authentication:
+
+1. **Obtain Auth Token**
+   - URL: `/api-token-auth/`
+   - Method: `POST`
+   - Request Body:
+     ```json
+     {
+       "username": "your_username",
+       "password": "your_password"
+     }
+     ```
+   - Response:
+     ```json
+     {
+       "token": "your_auth_token"
+     }
+     ```
+
+2. **Using the token**
+   - Include the token in the Authorization header for protected endpoints:
+     ```
+     Authorization: Token your_auth_token
+     ```
+   - This can be tested in Swagger UI by clicking the "Authorize" button and entering the token
+
+3. **User Management**
+   - Standard Django authentication URLs are available at `/accounts/`
+   - Admin interface is available at `/admin/` for user management
 
 ## Local Development Setup
 

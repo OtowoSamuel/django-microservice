@@ -1,0 +1,83 @@
+name: Build and Deploy
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+  workflow_dispatch:  # Allows manual triggering
+
+env:
+  AWS_REGION: us-east-1
+  ECR_REPOSITORY: django-microservice
+  EKS_CLUSTER_NAME: django-microservice-cluster  # Updated to match your actual cluster name
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      id: build-image
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        # Build a docker container and push it to ECR
+        docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+        
+        # Also tag as latest
+        docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+        
+        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+    
+    - name: Install kubectl
+      uses: azure/setup-kubectl@v3
+      
+    - name: Update kubeconfig
+      run: aws eks update-kubeconfig --region ${{ env.AWS_REGION }} --name ${{ env.EKS_CLUSTER_NAME }}
+    
+    - name: Process Kubernetes manifests
+      run: |
+        export ECR_REPO_URL=${{ steps.login-ecr.outputs.registry }}/${{ env.ECR_REPOSITORY }}
+        
+        # Process the manifest file to replace variables
+        cat microservices-k8.yml | \
+        sed "s|\${ECR_REPO_URL}|$ECR_REPO_URL|g" > microservices-k8-processed.yml
+        
+    - name: Deploy to EKS
+      run: |
+        kubectl apply -f microservices-k8-processed.yml
+    
+    - name: Restart deployments
+      run: |
+        kubectl rollout restart deployment web
+        kubectl rollout restart deployment worker
+        kubectl rollout status deployment web
+        kubectl rollout status deployment worker
+    
+    - name: Get service URL
+      run: |
+        echo "Application deployed successfully!"
+        LOAD_BALANCER=$(kubectl get svc -o jsonpath='{.items[?(@.spec.type=="LoadBalancer")].status.loadBalancer.ingress[0].hostname}')
+        if [ -n "$LOAD_BALANCER" ]; then
+          echo "Application is available at: http://$LOAD_BALANCER/"
+        else
+          echo "No LoadBalancer found."
+        fi

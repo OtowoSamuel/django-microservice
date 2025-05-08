@@ -1,5 +1,5 @@
 ---
-# PostgreSQL Deployment
+# Postgres Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -16,54 +16,35 @@ spec:
         app: postgres
     spec:
       containers:
-      - name: postgres
-        image: postgres:15
-        env:
-        - name: POSTGRES_PASSWORD
-          value: "postgres"  # Consider using a Kubernetes secret instead
-        - name: POSTGRES_USER
-          value: "postgres"
-        - name: POSTGRES_DB
-          value: "django_db"
-        - name: PGDATA
-          value: "/var/lib/postgresql/data/pgdata"
-        ports:
-        - containerPort: 5432
-        volumeMounts:
-        - name: postgres-data
-          mountPath: /var/lib/postgresql/data
+        - name: postgres
+          image: postgres:13-alpine
+          ports:
+            - containerPort: 5432
+          envFrom:
+            - secretRef:
+                name: app-secrets
+          volumeMounts:
+            - mountPath: /var/lib/postgresql/data
+              name: postgres-data
       volumes:
-      - name: postgres-data
-        persistentVolumeClaim:
-          claimName: postgres-pvc
+        - name: postgres-data
+          persistentVolumeClaim:
+            claimName: postgres-pvc
 ---
-# PostgreSQL Service
+# Redis Service
 apiVersion: v1
 kind: Service
 metadata:
-  name: db
+  name: redis-service
   namespace: default
 spec:
   selector:
-    app: postgres
+    app: redis
   ports:
-  - port: 5432
-    targetPort: 5432
+    - protocol: TCP
+      port: 6379
+      targetPort: 6379
   type: ClusterIP
----
-# PostgreSQL PVC
-apiVersion: v1
-kind: PersistentVolumeClaim
-metadata:
-  name: postgres-pvc
-  namespace: default
-spec:
-  accessModes:
-    - ReadWriteOnce
-  resources:
-    requests:
-      storage: 8Gi
-  storageClassName: gp2
 ---
 # Redis Deployment
 apiVersion: apps/v1
@@ -82,24 +63,10 @@ spec:
         app: redis
     spec:
       containers:
-      - name: redis
-        image: redis:alpine
-        ports:
-        - containerPort: 6379
----
-# Redis Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: redis
-  namespace: default
-spec:
-  selector:
-    app: redis
-  ports:
-  - port: 6379
-    targetPort: 6379
-  type: ClusterIP
+        - name: redis
+          image: redis:6-alpine
+          ports:
+            - containerPort: 6379
 ---
 # Web Deployment
 apiVersion: apps/v1
@@ -111,50 +78,59 @@ spec:
   replicas: 3
   selector:
     matchLabels:
-      app: web
+      app: django-app
+      component: web
   template:
     metadata:
       labels:
-        app: web
+        app: django-app
+        component: web
     spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: ['sh', '-c', 'until nslookup db; do echo waiting for postgres; sleep 2; done;']
+        - name: wait-for-redis
+          image: busybox
+          command: ['sh', '-c', 'until nslookup redis-service; do echo waiting for redis; sleep 2; done;']
       containers:
-      - name: web
-        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/django-microservice:latest
-        env:
-        - name: DB_NAME
-          value: "django_db"
-        - name: DB_USER
-          value: "postgres"
-        - name: DB_PASSWORD
-          value: "postgres"
-        - name: DB_HOST
-          value: "db"
-        - name: DB_PORT
-          value: "5432"
-        - name: SECRET_KEY
-          value: "django-insecure-key-for-development"
-        - name: DEBUG
-          value: "true"
-        ports:
-        - containerPort: 8000
-      imagePullSecrets:
-      - name: ecr-secret
+        - name: web
+          image: ${ECR_REPO_URL}:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8000
+          envFrom:
+            - secretRef:
+                name: app-secrets
+            - configMapRef:
+                name: app-config
+          resources:
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+          livenessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+            periodSeconds: 30
+            successThreshold: 1
+            failureThreshold: 3
+          readinessProbe:
+            httpGet:
+              path: /health/
+              port: 8000
+            initialDelaySeconds: 15
+            timeoutSeconds: 1
+            periodSeconds: 20
+            successThreshold: 1
+            failureThreshold: 3
 ---
-# Web Service
-apiVersion: v1
-kind: Service
-metadata:
-  name: web
-  namespace: default
-spec:
-  selector:
-    app: web
-  ports:
-  - port: 80
-    targetPort: 8000
-  type: LoadBalancer
----
-# Celery Worker Deployment
+# Worker Deployment
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -164,34 +140,30 @@ spec:
   replicas: 2
   selector:
     matchLabels:
-      app: worker
+      app: django-app
+      component: worker
   template:
     metadata:
       labels:
-        app: worker
+        app: django-app
+        component: worker
     spec:
+      initContainers:
+        - name: wait-for-postgres
+          image: busybox
+          command: ['sh', '-c', 'until nslookup db; do echo waiting for postgres; sleep 2; done;']
+        - name: wait-for-redis
+          image: busybox
+          command: ['sh', '-c', 'until nslookup redis-service; do echo waiting for redis; sleep 2; done;']
       containers:
-      - name: worker
-        image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/django-microservice:latest
-        env:
-        - name: DB_NAME
-          value: "django_db"
-        - name: DB_USER
-          value: "postgres"
-        - name: DB_PASSWORD
-          value: "postgres"
-        - name: DB_HOST
-          value: "db"
-        - name: DB_PORT
-          value: "5432"
-        - name: SECRET_KEY
-          value: "django-insecure-key-for-development"
-        - name: DEBUG
-          value: "true"
-        command: ["celery"]
-        args: ["-A", "core", "worker", "--loglevel=info"]
-      imagePullSecrets:
-      - name: ecr-secret
+        - name: worker
+          image: ${ECR_REPO_URL}:latest
+          envFrom:
+            - secretRef:
+                name: app-secrets
+            - configMapRef:
+                name: app-config
+          command: ["celery", "-A", "core", "worker", "--loglevel=info"]
 ---
 # Django Migrate Job
 apiVersion: batch/v1
@@ -208,23 +180,13 @@ spec:
           command: ['sh', '-c', 'until nslookup db; do echo waiting for postgres; sleep 2; done;']
       containers:
         - name: migrate
-          image: ${AWS_ACCOUNT_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/django-microservice:latest
+          image: ${ECR_REPO_URL}:latest
           command: ["python", "manage.py", "migrate"]
-          env:
-          - name: DB_NAME
-            value: "django_db"
-          - name: DB_USER
-            value: "postgres"
-          - name: DB_PASSWORD
-            value: "postgres"
-          - name: DB_HOST
-            value: "db"
-          - name: DB_PORT
-            value: "5432"
-          - name: SECRET_KEY
-            value: "django-insecure-key-for-development"
-          - name: DEBUG
-            value: "true"
+          envFrom:
+            - secretRef:
+                name: app-secrets
+            - configMapRef:
+                name: app-config
       restartPolicy: OnFailure
 ---
 # ConfigMap
@@ -234,7 +196,6 @@ metadata:
   name: app-config
   namespace: default
 data:
-  CELERY_BROKER_URL: redis://redis:6379/0
-  CELERY_RESULT_BACKEND: redis://redis:6379/0
+  CELERY_BROKER_URL: redis://redis-service:6379/0
+  CELERY_RESULT_BACKEND: redis://redis-service:6379/0
   DJANGO_SETTINGS_MODULE: core.settings
-  

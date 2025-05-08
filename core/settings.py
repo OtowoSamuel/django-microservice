@@ -9,8 +9,15 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/ 
 """
+print("=== DJANGO SETTINGS LOADED ===", flush=True)
+
 from pathlib import Path
 import os
+import logging
+
+print("=== DJANGO SETTINGS LOADED ===", flush=True)
+
+logger = logging.getLogger("django")
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -20,12 +27,40 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('SECRET_KEY')  # Load from .env
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-default-key-for-development')  # Load from .env or default
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+DEBUG = True
 
-ALLOWED_HOSTS = []
+# Update ALLOWED_HOSTS to be more permissive for troubleshooting
+ALLOWED_HOSTS = ['*']
+logger.warning(f"ALLOWED_HOSTS at startup: {ALLOWED_HOSTS}")
+
+# Add CORS settings to allow all origins
+CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+
+# Add detailed logging for debugging
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'handlers': {
+        'console': {
+            'class': 'logging.StreamHandler',
+        },
+    },
+    'root': {
+        'handlers': ['console'],
+        'level': 'DEBUG',
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'DEBUG',
+            'propagate': False,
+        },
+    },
+}
 
 
 # Application definition
@@ -41,11 +76,22 @@ INSTALLED_APPS = [
     'rest_framework.authtoken',
     'drf_yasg',
     'django_celery_results',
+    'corsheaders',  # Add CORS headers support
     'tasks',
 ]
 
+
+class HostHeaderLogMiddleware:
+    def __init__(self, get_response):
+        self.get_response = get_response
+    def __call__(self, request):
+        logger.warning(f"Incoming Host header: {request.META.get('HTTP_HOST')}, META: {request.META}")
+        return self.get_response(request)
+
 MIDDLEWARE = [
+    'core.settings.HostHeaderLogMiddleware',  # Add HostHeaderLogMiddleware for debugging
     'django.middleware.security.SecurityMiddleware',
+    'corsheaders.middleware.CorsMiddleware',  # Add CORS middleware early in the list
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -155,6 +201,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 STATIC_URL = '/static/'
 STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+
+USE_X_FORWARDED_HOST = True
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field

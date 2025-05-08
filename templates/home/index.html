@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Django Microservice API</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        h1 {
+            color: #333;
+        }
+        .button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-align: center;
+            text-decoration: none;
+            font-size: 16px;
+            margin: 10px 5px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        .info {
+            background-color: #f9f9f9;
+            border-left: 6px solid #2196F3;
+            padding: 10px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <h1>Django Microservice API</h1>
+    
+    <p>Welcome to the Django Microservice API. This application demonstrates a microservice architecture with Django, Celery, Redis, and Kubernetes.</p>
+    
+    <div class="info">
+        <h3>Authentication Required</h3>
+        <p>This API requires token authentication. Use the following token for testing:</p>
+        <code>Token a2646fef3ce417ecba425253834db1313d2d463a</code>
+    </div>
+    
+    <h2>Available Endpoints</h2>
+    
+    <p>
+        <a class="button" href="/swagger/">API Documentation (Swagger UI)</a>
+        <a class="button" href="/api/">API Endpoints</a>
+        <a class="button" href="/admin/">Admin Interface</a>
+    </p>
+    
+    <h2>How to Use the API</h2>
+    
+    <p>To use this API:</p>
+    <ol>
+        <li>Visit the <a href="/swagger/">Swagger UI</a> to explore available endpoints</li>
+        <li>Click the "Authorize" button and enter <code>Token a2646fef3ce417ecba425253834db1313d2d463a</code></li>
+        <li>Test the API endpoints directly from the Swagger UI interface</li>
+    </ol>
+    
+    <hr>
+    <footer>
+        <p><small>Django Microservice Assessment - Deployed on AWS EKS</small></p>
+    </footer>
+</body>
+</html>
