@@ -1,0 +1,194 @@
+name: Build and Deploy to EKS
+
+on:
+  push:
+    branches: [ master ]
+
+env:
+  ECR_REPOSITORY: django-microservice
+  EKS_CLUSTER_NAME: django-microservice-cluster
+
+jobs:
+  deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v1
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+      
+      - name: Verify AWS credentials
+        run: |
+          echo "Verifying AWS credentials..."
+          aws sts get-caller-identity
+          
+          echo "Checking ECR access..."
+          aws ecr describe-repositories --repository-names ${{ env.ECR_REPOSITORY }} || aws ecr create-repository --repository-name ${{ env.ECR_REPOSITORY }}
+          
+          echo "Checking EKS access..."
+          aws eks describe-cluster --name ${{ env.EKS_CLUSTER_NAME }}
+
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v1
+
+      - name: Build and test Docker image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Run tests before building the final image
+          echo "Running tests..."
+          docker build --target test -t $ECR_REGISTRY/$ECR_REPOSITORY:test .
+          
+          # Build the production image
+          echo "Building production image..."
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG -t $ECR_REGISTRY/$ECR_REPOSITORY:latest .
+      
+      - name: Push Docker image to Amazon ECR
+        id: push-image
+        env:
+          ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          IMAGE_TAG: ${{ github.sha }}
+        run: |
+          # Push the Docker image to ECR
+          echo "Pushing image to ECR..."
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+          echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v3
+        with:
+          version: 'latest'
+
+      - name: Update kubeconfig
+        run: |
+          aws eks update-kubeconfig --name ${{ env.EKS_CLUSTER_NAME }} --region ${{ secrets.AWS_REGION }}
+          kubectl get nodes -o wide
+      
+      - name: Check if PostgreSQL is running
+        run: |
+          echo "Checking if PostgreSQL is running..."
+          kubectl get pods -l app=postgres
+          POSTGRES_STATUS=$(kubectl get pods -l app=postgres -o json | jq -r '.items[0].status.phase')
+          echo "PostgreSQL status: $POSTGRES_STATUS"
+          if [ "$POSTGRES_STATUS" != "Running" ]; then
+            echo "PostgreSQL is not running. Checking pod details..."
+            kubectl describe pods -l app=postgres
+          fi
+      
+      - name: Deploy to Kubernetes
+        run: |
+          # Update web deployment with the new image
+          echo "Updating web deployment..."
+          kubectl set image deployment/web web=${{ steps.push-image.outputs.image }}
+          
+          # Update worker deployment with the new image
+          echo "Updating worker deployment..."
+          kubectl set image deployment/worker worker=${{ steps.push-image.outputs.image }}
+          
+          # Wait for rollout to complete
+          echo "Waiting for web deployment rollout to complete..."
+          kubectl rollout status deployment/web --timeout=180s
+          
+          echo "Waiting for worker deployment rollout to complete..."
+          kubectl rollout status deployment/worker --timeout=180s
+
+      - name: Apply database migrations
+        run: |
+          # Create a temporary pod to run migrations
+          echo "Creating migration job..."
+          cat <<EOF | kubectl apply -f -
+          apiVersion: batch/v1
+          kind: Job
+          metadata:
+            name: django-migrate-${{ github.sha }}
+            labels:
+              app: django-migrate
+          spec:
+            ttlSecondsAfterFinished: 600
+            template:
+              spec:
+                initContainers:
+                - name: check-db-ready
+                  image: postgres:15-alpine
+                  command: ['sh', '-c', 
+                    'until pg_isready -h ${{ secrets.DB_HOST }} -p ${{ secrets.DB_PORT }}; do echo waiting for database; sleep 2; done;']
+                containers:
+                - name: django
+                  image: ${{ steps.push-image.outputs.image }}
+                  command: ["python", "manage.py", "migrate", "--noinput"]
+                  env:
+                  - name: DB_NAME
+                    value: "${{ secrets.DB_NAME }}"
+                  - name: DB_USER
+                    value: "${{ secrets.DB_USER }}"
+                  - name: DB_PASSWORD
+                    value: "${{ secrets.DB_PASSWORD }}"
+                  - name: DB_HOST
+                    value: "${{ secrets.DB_HOST }}"
+                  - name: DB_PORT
+                    value: "${{ secrets.DB_PORT }}"
+                  - name: SECRET_KEY
+                    value: "${{ secrets.SECRET_KEY }}"
+                  - name: DEBUG
+                    value: "false"
+                  - name: CELERY_BROKER_URL
+                    value: "${{ secrets.CELERY_BROKER_URL }}"
+                  - name: CELERY_RESULT_BACKEND
+                    value: "${{ secrets.CELERY_RESULT_BACKEND }}"
+                restartPolicy: Never
+          EOF
+          
+          # Wait for migration job to complete
+          echo "Waiting for migrations to complete..."
+          kubectl wait --for=condition=complete job/django-migrate-${{ github.sha }} --timeout=120s || true
+          
+          # Get logs from the job
+          echo "Migration logs:"
+          kubectl logs job/django-migrate-${{ github.sha }}
+
+      - name: Update environment variables in deployments
+        run: |
+          # Update web deployment with environment variables
+          kubectl set env deployment/web \
+            DB_NAME="${{ secrets.DB_NAME }}" \
+            DB_USER="${{ secrets.DB_USER }}" \
+            DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+            DB_HOST="${{ secrets.DB_HOST }}" \
+            DB_PORT="${{ secrets.DB_PORT }}" \
+            SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+            CELERY_BROKER_URL="${{ secrets.CELERY_BROKER_URL }}" \
+            CELERY_RESULT_BACKEND="${{ secrets.CELERY_RESULT_BACKEND }}"
+            
+          # Update worker deployment with environment variables
+          kubectl set env deployment/worker \
+            DB_NAME="${{ secrets.DB_NAME }}" \
+            DB_USER="${{ secrets.DB_USER }}" \
+            DB_PASSWORD="${{ secrets.DB_PASSWORD }}" \
+            DB_HOST="${{ secrets.DB_HOST }}" \
+            DB_PORT="${{ secrets.DB_PORT }}" \
+            SECRET_KEY="${{ secrets.SECRET_KEY }}" \
+            CELERY_BROKER_URL="${{ secrets.CELERY_BROKER_URL }}" \
+            CELERY_RESULT_BACKEND="${{ secrets.CELERY_RESULT_BACKEND }}"
+
+      - name: Verify deployment
+        run: |
+          echo "Checking pod status:"
+          kubectl get pods -o wide
+          
+          echo "Checking services:"
+          kubectl get services
+          
+          echo "Web service endpoint:"
+          kubectl get service web -o jsonpath='{.status.loadBalancer.ingress[0].hostname}'
+
+          
