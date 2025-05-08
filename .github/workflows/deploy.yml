@@ -45,7 +45,7 @@ jobs:
         docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG $ECR_REGISTRY/$ECR_REPOSITORY:latest
         docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
         
-        echo "::set-output name=image::$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+        echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
     
     - name: Install kubectl
       uses: azure/setup-kubectl@v3
@@ -61,16 +61,65 @@ jobs:
         cat microservices-k8.yml | \
         sed "s|\${ECR_REPO_URL}|$ECR_REPO_URL|g" > microservices-k8-processed.yml
         
-    - name: Deploy to EKS
+    - name: Deploy core infrastructure
       run: |
-        kubectl apply -f microservices-k8-processed.yml
+        # Apply everything except the migration job first
+        grep -v "name: django-migrate" microservices-k8-processed.yml > core-infrastructure.yml
+        kubectl apply -f core-infrastructure.yml
+        
+        # Wait for database to be ready
+        echo "Waiting for database to be ready..."
+        kubectl wait --for=condition=available --timeout=300s deployment/postgres
+        sleep 30  # Give the database a bit more time to initialize
+    
+    - name: Run database migrations
+      run: |
+        # Generate a unique job name with commit hash
+        COMMIT_HASH=$(echo ${{ github.sha }} | cut -c1-40)
+        JOB_NAME="django-migrate-$COMMIT_HASH"
+        
+        # Extract the migration job and add a unique name
+        cat microservices-k8-processed.yml | \
+          sed -n '/# Django Migrate Job/,/---/p' | \
+          sed "s/name: django-migrate/name: $JOB_NAME/" > migration-job.yml
+        
+        echo "Creating migration job..."
+        kubectl apply -f migration-job.yml
+        
+        echo "Waiting for migrations to complete..."
+        
+        # Wait with increased timeout and better error handling
+        if ! kubectl wait --for=condition=complete --timeout=180s job/$JOB_NAME; then
+          echo "Migration job didn't complete in time, checking logs..."
+          # If wait fails, get the pod name and check logs
+          POD_NAME=$(kubectl get pods -l job-name=$JOB_NAME -o jsonpath='{.items[0].metadata.name}')
+          echo "Migration logs:"
+          kubectl logs $POD_NAME --all-containers || true
+          kubectl describe pod $POD_NAME || true
+          
+          # Check if job is still running
+          if kubectl get job $JOB_NAME -o jsonpath='{.status.active}' | grep -q 1; then
+            echo "Job is still running, giving it more time..."
+            sleep 60
+            kubectl wait --for=condition=complete --timeout=60s job/$JOB_NAME || true
+            kubectl logs $(kubectl get pods -l job-name=$JOB_NAME -o jsonpath='{.items[0].metadata.name}') --all-containers || true
+          fi
+          
+          # Final check
+          if kubectl get job $JOB_NAME -o jsonpath='{.status.succeeded}' | grep -q 1; then
+            echo "Migration succeeded after additional wait"
+          else
+            echo "Migration failed"
+            exit 1
+          fi
+        fi
     
     - name: Restart deployments
       run: |
         kubectl rollout restart deployment web
         kubectl rollout restart deployment worker
-        kubectl rollout status deployment web
-        kubectl rollout status deployment worker
+        kubectl rollout status deployment web --timeout=180s
+        kubectl rollout status deployment worker --timeout=180s
     
     - name: Get service URL
       run: |

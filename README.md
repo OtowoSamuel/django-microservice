@@ -1,276 +1,251 @@
 # Django Microservice API
 
-A Django-based microservice that provides a REST API for background task processing, deployed on AWS using EKS, Docker, and CI/CD principles.
+A Django-based microservice with REST API endpoints for background task processing, deployed on AWS EKS with full CI/CD automation.
 
-## Live Deployment
+## Project Overview
 
-The application is currently deployed on AWS EKS at:
-- API: http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/api/
-- API Documentation: http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/swagger/
+This project implements a microservice that:
+- Provides REST API endpoints using Django and Django REST Framework
+- Processes background tasks using Celery and Redis
+- Uses PostgreSQL for data persistence
+- Integrates token-based authentication
+- Includes comprehensive API documentation with Swagger/OpenAPI
+- Is fully containerized with Docker
+- Runs on Kubernetes (AWS EKS) with robust infrastructure as code
 
-**Important**: The API requires token authentication. To access the API, use the following authentication token:
+## Architecture
 
-```
-Token a2646fef3ce417ecba425253834db1313d2d463a
-```
+### Backend Components
 
-### Testing the API with Authentication
+- **Django + DRF**: Core web framework and REST API implementation
+- **Celery**: Background task processing
+- **Redis**: Message broker for Celery and result backend
+- **PostgreSQL**: Database for persistent storage
+- **Gunicorn**: WSGI HTTP server for production
+- **Nginx**: (Optional) HTTP server and reverse proxy (when using local deployment)
 
-You can test the API using curl with the authentication token:
+### Infrastructure Components
 
-```bash
-# Create a new task
-curl -X POST -H "Content-Type: application/json" \
-  -H "Authorization: Token a2646fef3ce417ecba425253834db1313d2d463a" \
-  -d '{"email": "test@example.com", "message": "Hello from the API!"}' \
-  http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/api/process/
+- **AWS EKS**: Managed Kubernetes service
+- **AWS ECR**: Container registry for Docker images
+- **AWS EBS**: Persistent storage for PostgreSQL
+- **AWS Load Balancer**: Traffic management and public access
+- **Terraform**: Infrastructure as code
 
-# Check task status (replace TASK_ID with the ID received from the previous call)
-curl -H "Authorization: Token a2646fef3ce417ecba425253834db1313d2d463a" \
-  http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/api/status/TASK_ID/
-```
+### CI/CD Pipeline
 
-### Swagger UI Authentication
+- **GitHub Actions**: Automated build and deployment
+- **Docker**: Containerization
+- **AWS ECR**: Container registry
 
-To use the Swagger UI documentation:
-1. Open http://a1fb5209bdd12496e9c8e7aa92864dec-662626986.us-east-1.elb.amazonaws.com/swagger/
-2. Click the "Authorize" button
-3. Enter the token: `Token a2646fef3ce417ecba425253834db1313d2d463a`
-4. Click "Authorize" and close the dialog
-5. Now you can test the API endpoints directly from the Swagger UI
-
-## Architecture Overview
-
-This application is built as a microservice architecture with the following components:
-
-1. **Web API Layer**: Django + Django REST Framework
-   - Handles API requests and responses
-   - Validates input data
-   - Queues background tasks
-
-2. **Background Processing**: Celery + Redis
-   - Celery workers process tasks asynchronously
-   - Redis serves as message broker and result backend
-   - Simulates time-consuming operations
-
-3. **Database Layer**: PostgreSQL
-   - Stores task data, status, and results
-   - Persists application state
-
-4. **Container Orchestration**: Kubernetes (AWS EKS)
-   - Manages application containers
-   - Provides scaling and resilience
-   - Handles service discovery
-
-5. **CI/CD Pipeline**: GitHub Actions
-   - Automated testing
-   - Containerization
-   - Deployment to EKS
-
-## API Documentation
-
-The API is documented using Swagger/OpenAPI and can be accessed at `/swagger/` when the application is running.
-
-### Endpoints
-
-1. **Process Task**
-   - URL: `/api/process/`
-   - Method: `POST`
-   - Request Body:
-     ```json
-     {
-       "email": "user@example.com",
-       "message": "Hello World"
-     }
-     ```
-   - Response: 
-     ```json
-     {
-       "task_id": "12345-67890-abcdef",
-       "status": "pending"
-     }
-     ```
-
-2. **Get Task Status**
-   - URL: `/api/status/<task_id>/`
-   - Method: `GET`
-   - Response:
-     ```json
-     {
-       "task_id": "12345-67890-abcdef",
-       "status": "completed", // or "pending", "failed"
-       "result": "Task processed successfully"
-     }
-     ```
+## API Endpoints
 
 ### Authentication
 
-The API uses token-based authentication:
+All API endpoints require token authentication. Include the token in the request header:
 
-1. **Obtain Auth Token**
-   - URL: `/api-token-auth/`
-   - Method: `POST`
-   - Request Body:
-     ```json
-     {
-       "username": "your_username",
-       "password": "your_password"
-     }
-     ```
-   - Response:
-     ```json
-     {
-       "token": "your_auth_token"
-     }
-     ```
+```
+Authorization: Token <your-token>
+```
 
-2. **Using the token**
-   - Include the token in the Authorization header for protected endpoints:
-     ```
-     Authorization: Token your_auth_token
-     ```
-   - This can be tested in Swagger UI by clicking the "Authorize" button and entering the token
+A default token is available for testing: `Token a2646fef3ce417ecba425253834db1313d2d463a`
 
-3. **User Management**
-   - Standard Django authentication URLs are available at `/accounts/`
-   - Admin interface is available at `/admin/` for user management
+### Task Processing
+
+- **POST /api/process/**
+  - Process a new task
+  - Payload:
+    ```json
+    {
+      "email": "user@example.com",
+      "message": "Hello World"
+    }
+    ```
+  - Response:
+    ```json
+    {
+      "task_id": "uuid-task-id",
+      "status": "PENDING"
+    }
+    ```
+
+- **GET /api/status/<task_id>/**
+  - Get status of a task
+  - Response:
+    ```json
+    {
+      "task_id": "uuid-task-id",
+      "status": "SUCCESS",
+      "result": "Task completed successfully"
+    }
+    ```
+
+### Documentation
+
+- **GET /swagger/** - Swagger UI for API documentation
+- **GET /api/** - DRF browsable API
+- **GET /admin/** - Django admin interface
 
 ## Local Development Setup
 
 ### Prerequisites
 
 - Docker and Docker Compose
-- Python 3.10+
-- AWS CLI (for deployment)
-- Terraform (for infrastructure provisioning)
+- Python 3.9+
+- Git
 
-### Running Locally with Docker Compose
+### Installation
 
-1. Clone the repository:
+1. Clone the repository
    ```bash
-   git clone https://github.com/yourusername/django-microservice.git
+   git clone <repository-url>
    cd django-microservice
    ```
 
-2. Start the services:
+2. Start the application using Docker Compose
    ```bash
    docker-compose up -d
    ```
 
-3. Access the API at `http://localhost:8000/api/`
-   - Swagger UI: `http://localhost:8000/swagger/`
+3. Access the application at http://localhost:8000
 
-4. To stop the services:
+### Manual Development Setup (without Docker)
+
+1. Create a virtual environment
    ```bash
-   docker-compose down
+   python -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
    ```
 
-## Deployment to AWS
+2. Install dependencies
+   ```bash
+   pip install -r requirements.txt
+   ```
 
-### Infrastructure Setup with Terraform
+3. Set up environment variables
+   ```bash
+   export DJANGO_SETTINGS_MODULE=core.settings
+   export DATABASE_URL=postgres://postgres:postgres@localhost:5432/django_microservice
+   export CELERY_BROKER_URL=redis://localhost:6379/0
+   export CELERY_RESULT_BACKEND=redis://localhost:6379/0
+   export SECRET_KEY=your-secret-key-here
+   ```
 
-1. Navigate to the terraform directory:
+4. Start Redis and PostgreSQL (via Docker or locally)
+   ```bash
+   docker run -d -p 6379:6379 redis:6-alpine
+   docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=django_microservice postgres:13-alpine
+   ```
+
+5. Run migrations
+   ```bash
+   python manage.py migrate
+   ```
+
+6. Create a superuser (for admin access)
+   ```bash
+   python manage.py createsuperuser
+   ```
+
+7. Start the development server
+   ```bash
+   python manage.py runserver
+   ```
+
+8. Start the Celery worker in a separate terminal
+   ```bash
+   celery -A core worker --loglevel=info
+   ```
+
+## AWS Deployment
+
+### Prerequisites
+
+- AWS CLI configured with appropriate credentials
+- kubectl installed
+- Terraform installed
+
+### Deployment Options
+
+#### 1. Automated Deployment with GitHub Actions (Recommended)
+
+1. Push your code to GitHub
+
+2. Configure GitHub Secrets in your repository:
+   - `AWS_ACCESS_KEY_ID`: Your IAM user's access key
+   - `AWS_SECRET_ACCESS_KEY`: Your IAM user's secret key
+
+3. Push to the main/master branch to trigger the workflow
+
+4. The GitHub Actions workflow will:
+   - Build the Docker image
+   - Push to ECR
+   - Deploy to EKS
+   - Restart the deployments
+
+#### 2. Manual Deployment with Terraform and kubectl
+
+1. Apply the Terraform configuration
    ```bash
    cd terraform
-   ```
-
-2. Initialize Terraform:
-   ```bash
    terraform init
+   terraform apply
    ```
 
-3. Plan the infrastructure:
+2. Build and push the Docker image
    ```bash
-   terraform plan -var="region=us-east-1"
+   docker build -t django-microservice:latest .
+   docker tag django-microservice:latest <your-aws-account-id>.dkr.ecr.<region>.amazonaws.com/django-microservice:latest
+   aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <your-aws-account-id>.dkr.ecr.<region>.amazonaws.com
+   docker push <your-aws-account-id>.dkr.ecr.<region>.amazonaws.com/django-microservice:latest
    ```
 
-4. Apply the configuration:
+3. Deploy to Kubernetes
    ```bash
-   terraform apply -var="region=us-east-1"
+   export ECR_REPO_URL=<your-aws-account-id>.dkr.ecr.<region>.amazonaws.com/django-microservice
+   cat microservices-k8.yml | sed "s|\${ECR_REPO_URL}|$ECR_REPO_URL|g" | kubectl apply -f -
    ```
 
-This will create:
-- EKS cluster
+#### 3. Quick Deployment with deploy.sh
+
+For convenience, use the included deploy.sh script:
+```bash
+chmod +x deploy.sh
+./deploy.sh
+```
+
+## Infrastructure as Code
+
+All infrastructure is defined in Terraform:
+
+- EKS cluster setup
+- IAM roles and policies
 - ECR repository
-- Required IAM roles and policies
-- Network resources
-- PostgreSQL and Redis services in Kubernetes
+- Storage classes and persistent volumes
+- Security groups and networking
 
-### CI/CD Pipeline
-
-The application uses GitHub Actions for CI/CD. The workflow is defined in `.github/workflows/deploy-to-eks.yml` and performs the following steps:
-
-1. Builds the Docker image
-2. Pushes the image to AWS ECR
-3. Deploys to EKS cluster
-4. Runs database migrations
-5. Updates environment variables
-
-To use this pipeline, you'll need to set up the following GitHub secrets:
-- `AWS_ACCESS_KEY_ID`
-- `AWS_SECRET_ACCESS_KEY`
-- `AWS_REGION`
-- `SECRET_KEY`
-
-## Kubernetes Resources
-
-The application is deployed to Kubernetes using the `microservices-k8.yml` manifest, which includes:
-
-- Web API Deployment and Service
-- Celery Worker Deployment
-- PostgreSQL Deployment and Service
-- Redis Deployment and Service
-- Persistent Volume Claims for data persistence
-
-## Environment Variables
-
-The application uses the following environment variables:
-
-- `DB_NAME`: PostgreSQL database name
-- `DB_USER`: PostgreSQL username
-- `DB_PASSWORD`: PostgreSQL password
-- `DB_HOST`: PostgreSQL host
-- `DB_PORT`: PostgreSQL port (default: 5432)
-- `SECRET_KEY`: Django secret key
-- `DEBUG`: Enable debug mode (true/false)
-- `CELERY_BROKER_URL`: Redis URL for Celery broker
-- `CELERY_RESULT_BACKEND`: Redis URL for Celery results
-
-## Cloud Architecture Details
-
-The application is deployed on AWS with the following components:
-
-1. **Amazon EKS (Elastic Kubernetes Service)**
-   - Manages the Kubernetes cluster
-   - Runs application containers
-
-2. **Amazon ECR (Elastic Container Registry)**
-   - Stores Docker images
-   - Integrates with CI/CD pipeline
-
-3. **AWS IAM**
-   - Manages access and permissions
-   - Integrates with Kubernetes RBAC
-
-4. **AWS Load Balancer**
-   - Provides public access to the API
-   - Handles SSL termination
+The Terraform code is located in the `terraform/` directory.
 
 ## Monitoring and Logging
 
-The application integrates with:
-- AWS CloudWatch for logs and metrics
-- Kubernetes Dashboard for cluster monitoring
-- ELK stack for centralized logging (optional setup)
+- AWS CloudWatch integration for logs and metrics
+- Health endpoints for liveness and readiness probes
+
+## Load Testing
+
+For load testing, we recommend using Locust or Apache JMeter to simulate traffic to the API endpoints.
 
 ## Security Considerations
 
-- Environment variables for sensitive information
-- IAM roles for service accounts
-- Network policies in Kubernetes
-- API rate limiting
-- Secure database connections
+- Token-based authentication for API access
+- ALLOWED_HOSTS configuration for Django
+- Proper environment variable usage
+- IAM roles with least privilege principle
 
-## License
+## Future Enhancements
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+- Implement email notifications for task completion
+- Add real-time status updates with WebSockets
+- Implement more sophisticated authentication (OAuth2, JWT)
+- Set up automated backups for PostgreSQL
+- Add comprehensive test coverage

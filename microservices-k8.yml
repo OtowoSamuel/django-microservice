@@ -31,6 +31,21 @@ spec:
           persistentVolumeClaim:
             claimName: postgres-pvc
 ---
+# Postgres Service
+apiVersion: v1
+kind: Service
+metadata:
+  name: db
+  namespace: default
+spec:
+  selector:
+    app: postgres
+  ports:
+    - protocol: TCP
+      port: 5432
+      targetPort: 5432
+  type: ClusterIP
+---
 # Redis Service
 apiVersion: v1
 kind: Service
@@ -175,9 +190,10 @@ spec:
   template:
     spec:
       initContainers:
-        - name: wait-for-postgres
-          image: busybox
-          command: ['sh', '-c', 'until nslookup db; do echo waiting for postgres; sleep 2; done;']
+        - name: check-db-ready
+          image: postgres:13-alpine
+          command: ['sh', '-c', 
+            'until pg_isready -h db -p 5432; do echo "Waiting for postgres"; sleep 2; done;']
       containers:
         - name: migrate
           image: ${ECR_REPO_URL}:latest
