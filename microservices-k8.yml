@@ -202,31 +202,6 @@ spec:
                 name: app-config
           command: ["celery", "-A", "core", "worker", "--loglevel=info"]
 ---
-# Django Migrate Job
-apiVersion: batch/v1
-kind: Job
-metadata:
-  name: django-migrate
-  namespace: default
-spec:
-  template:
-    spec:
-      initContainers:
-        - name: check-db-ready
-          image: postgres:13-alpine
-          command: ['sh', '-c', 
-            'until pg_isready -h db -p 5432; do echo "Waiting for postgres"; sleep 2; done;']
-      containers:
-        - name: django
-          image: ${ECR_REPO_URL}:latest
-          command: ["python", "manage.py", "migrate"]
-          envFrom:
-            - secretRef:
-                name: app-secrets
-            - configMapRef:
-                name: app-config
-      restartPolicy: OnFailure
----
 # ConfigMap
 apiVersion: v1
 kind: ConfigMap
