@@ -20,6 +20,27 @@ spec:
           image: postgres:13-alpine
           ports:
             - containerPort: 5432
+          env:
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_PASSWORD
+                  optional: false
+            - name: POSTGRES_USER
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_USER
+                  optional: false
+            - name: POSTGRES_DB
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DB_NAME
+                  optional: false
+            - name: PGDATA
+              value: "/var/lib/postgresql/data/pgdata"
           envFrom:
             - secretRef:
                 name: app-secrets

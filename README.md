@@ -1,90 +1,45 @@
-# Django Microservice API
+# Django Microservice with Celery and Redis
 
-A Django-based microservice with REST API endpoints for background task processing, deployed on AWS EKS with full CI/CD automation.
+A Django-based microservice that provides a REST API for processing background tasks using Celery and Redis. This application is containerized with Docker and deployed on AWS using Terraform and Kubernetes.
 
-## Project Overview
+## Architecture Overview
 
-This project implements a microservice that:
-- Provides REST API endpoints using Django and Django REST Framework
-- Processes background tasks using Celery and Redis
-- Uses PostgreSQL for data persistence
-- Integrates token-based authentication
-- Includes comprehensive API documentation with Swagger/OpenAPI
-- Is fully containerized with Docker
-- Runs on Kubernetes (AWS EKS) with robust infrastructure as code
+This project implements a microservice architecture with the following components:
 
-## Architecture
+- **Web Service**: Django + Django REST Framework
+- **Background Task Processing**: Celery
+- **Message Broker/Results Backend**: Redis
+- **Database**: PostgreSQL
+- **API Documentation**: Swagger/OpenAPI
+- **Containerization**: Docker
+- **Orchestration**: Kubernetes (EKS)
+- **Infrastructure as Code**: Terraform
 
-### Backend Components
+## Features
 
-- **Django + DRF**: Core web framework and REST API implementation
-- **Celery**: Background task processing
-- **Redis**: Message broker for Celery and result backend
-- **PostgreSQL**: Database for persistent storage
-- **Gunicorn**: WSGI HTTP server for production
-- **Nginx**: (Optional) HTTP server and reverse proxy (when using local deployment)
-
-### Infrastructure Components
-
-- **AWS EKS**: Managed Kubernetes service
-- **AWS ECR**: Container registry for Docker images
-- **AWS EBS**: Persistent storage for PostgreSQL
-- **AWS Load Balancer**: Traffic management and public access
-- **Terraform**: Infrastructure as code
-
-### CI/CD Pipeline
-
-- **GitHub Actions**: Automated build and deployment
-- **Docker**: Containerization
-- **AWS ECR**: Container registry
+- REST API endpoints for processing tasks and checking their status
+- Background task processing via Celery workers
+- API documentation via Swagger UI
+- Token-based authentication
+- Containerized application for easy deployment
+- Kubernetes deployment for scalability and reliability
+- Terraform scripts for infrastructure provisioning
 
 ## API Endpoints
 
-### Authentication
+- `POST /api/process/`: Submit a task for background processing
+  ```json
+  {
+    "email": "user@example.com",
+    "message": "Hello World"
+  }
+  ```
 
-All API endpoints require token authentication. Include the token in the request header:
+- `GET /api/status/<task_id>/`: Check the status of a background task
 
-```
-Authorization: Token <your-token>
-```
+- `/swagger/`: API documentation using Swagger UI
 
-A default token is available for testing: `Token a2646fef3ce417ecba425253834db1313d2d463a`
-
-### Task Processing
-
-- **POST /api/process/**
-  - Process a new task
-  - Payload:
-    ```json
-    {
-      "email": "user@example.com",
-      "message": "Hello World"
-    }
-    ```
-  - Response:
-    ```json
-    {
-      "task_id": "uuid-task-id",
-      "status": "PENDING"
-    }
-    ```
-
-- **GET /api/status/<task_id>/**
-  - Get status of a task
-  - Response:
-    ```json
-    {
-      "task_id": "uuid-task-id",
-      "status": "SUCCESS",
-      "result": "Task completed successfully"
-    }
-    ```
-
-### Documentation
-
-- **GET /swagger/** - Swagger UI for API documentation
-- **GET /api/** - DRF browsable API
-- **GET /admin/** - Django admin interface
+- `/admin/`: Django admin interface
 
 ## Local Development Setup
 
@@ -92,160 +47,133 @@ A default token is available for testing: `Token a2646fef3ce417ecba425253834db13
 
 - Docker and Docker Compose
 - Python 3.9+
-- Git
+- pip
 
-### Installation
+### Environment Variables
 
-1. Clone the repository
+Create a `.env` file in the root directory with the following variables:
+
+```
+SECRET_KEY=your_secret_key
+DB_NAME=django_db
+DB_USER=postgres
+DB_PASSWORD=postgres
+DB_HOST=db
+DB_PORT=5432
+POSTGRES_DB=django_db
+POSTGRES_USER=postgres
+POSTGRES_PASSWORD=postgres
+```
+
+### Running with Docker Compose
+
+1. Build and start the containers:
    ```bash
-   git clone <repository-url>
-   cd django-microservice
+   docker-compose up --build
    ```
 
-2. Start the application using Docker Compose
-   ```bash
-   docker-compose up -d
-   ```
+2. Access the API at http://localhost:8000
 
-3. Access the application at http://localhost:8000
+3. Access the Swagger documentation at http://localhost:8000/swagger/
 
-### Manual Development Setup (without Docker)
+### Running without Docker
 
-1. Create a virtual environment
-   ```bash
-   python -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
-   ```
-
-2. Install dependencies
+1. Install dependencies:
    ```bash
    pip install -r requirements.txt
    ```
 
-3. Set up environment variables
-   ```bash
-   export DJANGO_SETTINGS_MODULE=core.settings
-   export DATABASE_URL=postgres://postgres:postgres@localhost:5432/django_microservice
-   export CELERY_BROKER_URL=redis://localhost:6379/0
-   export CELERY_RESULT_BACKEND=redis://localhost:6379/0
-   export SECRET_KEY=your-secret-key-here
-   ```
+2. Start Redis server (required for Celery)
 
-4. Start Redis and PostgreSQL (via Docker or locally)
-   ```bash
-   docker run -d -p 6379:6379 redis:6-alpine
-   docker run -d -p 5432:5432 -e POSTGRES_PASSWORD=postgres -e POSTGRES_DB=django_microservice postgres:13-alpine
-   ```
+3. Configure environment variables
 
-5. Run migrations
+4. Run migrations:
    ```bash
    python manage.py migrate
    ```
 
-6. Create a superuser (for admin access)
-   ```bash
-   python manage.py createsuperuser
-   ```
-
-7. Start the development server
+5. Start the Django development server:
    ```bash
    python manage.py runserver
    ```
 
-8. Start the Celery worker in a separate terminal
+6. Start Celery worker:
    ```bash
    celery -A core worker --loglevel=info
    ```
 
-## AWS Deployment
+## Deployment
 
-### Prerequisites
+### AWS Deployment with Terraform and Kubernetes
 
-- AWS CLI configured with appropriate credentials
-- kubectl installed
+This project is configured for deployment on AWS EKS (Elastic Kubernetes Service) using Terraform.
+
+#### Prerequisites
+
+- AWS CLI configured with appropriate permissions
 - Terraform installed
+- kubectl installed
 
-### Deployment Options
+#### Deployment Steps
 
-#### 1. Automated Deployment with GitHub Actions (Recommended)
-
-1. Push your code to GitHub
-
-2. Configure GitHub Secrets in your repository:
-   - `AWS_ACCESS_KEY_ID`: Your IAM user's access key
-   - `AWS_SECRET_ACCESS_KEY`: Your IAM user's secret key
-
-3. Push to the main/master branch to trigger the workflow
-
-4. The GitHub Actions workflow will:
-   - Build the Docker image
-   - Push to ECR
-   - Deploy to EKS
-   - Restart the deployments
-
-#### 2. Manual Deployment with Terraform and kubectl
-
-1. Apply the Terraform configuration
+1. Navigate to the terraform directory:
    ```bash
    cd terraform
+   ```
+
+2. Initialize Terraform:
+   ```bash
    terraform init
+   ```
+
+3. Apply Terraform configuration:
+   ```bash
    terraform apply
    ```
 
-2. Build and push the Docker image
+4. Configure kubectl to connect to the EKS cluster:
    ```bash
-   docker build -t django-microservice:latest .
-   docker tag django-microservice:latest <your-aws-account-id>.dkr.ecr.<region>.amazonaws.com/django-microservice:latest
-   aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <your-aws-account-id>.dkr.ecr.<region>.amazonaws.com
-   docker push <your-aws-account-id>.dkr.ecr.<region>.amazonaws.com/django-microservice:latest
+   aws eks update-kubeconfig --name django-microservice-cluster
    ```
 
-3. Deploy to Kubernetes
+5. Deploy the application to Kubernetes:
    ```bash
-   export ECR_REPO_URL=<your-aws-account-id>.dkr.ecr.<region>.amazonaws.com/django-microservice
-   cat microservices-k8.yml | sed "s|\${ECR_REPO_URL}|$ECR_REPO_URL|g" | kubectl apply -f -
+   kubectl apply -f ../microservices-k8.yml
    ```
 
-#### 3. Quick Deployment with deploy.sh
+6. Verify deployment:
+   ```bash
+   kubectl get pods
+   kubectl get svc
+   ```
 
-For convenience, use the included deploy.sh script:
-```bash
-chmod +x deploy.sh
-./deploy.sh
-```
+## Project Structure
 
-## Infrastructure as Code
+- `core/`: Main Django project settings
+- `tasks/`: Django app containing the API and task processing logic
+- `terraform/`: Terraform scripts for AWS deployment
+- `kubernetes/`: Kubernetes configuration files
+- `Dockerfile`: Docker configuration
+- `docker-compose.yml`: Docker Compose configuration for local development
+- `requirements.txt`: Python dependencies
+- `manage.py`: Django management script
 
-All infrastructure is defined in Terraform:
+## Technologies
 
-- EKS cluster setup
-- IAM roles and policies
-- ECR repository
-- Storage classes and persistent volumes
-- Security groups and networking
+- **Backend**: Django, Django REST Framework
+- **Task Processing**: Celery
+- **Database**: PostgreSQL
+- **Cache/Message Broker**: Redis
+- **Containerization**: Docker
+- **Orchestration**: Kubernetes (EKS)
+- **Infrastructure**: AWS (EC2, EKS, RDS, etc.)
+- **IaC**: Terraform
+- **Documentation**: Swagger/OpenAPI
 
-The Terraform code is located in the `terraform/` directory.
+## License
 
-## Monitoring and Logging
+[MIT License](LICENSE)
 
-- AWS CloudWatch integration for logs and metrics
-- Health endpoints for liveness and readiness probes
+## Author
 
-## Load Testing
-
-For load testing, we recommend using Locust or Apache JMeter to simulate traffic to the API endpoints.
-
-## Security Considerations
-
-- Token-based authentication for API access
-- ALLOWED_HOSTS configuration for Django
-- Proper environment variable usage
-- IAM roles with least privilege principle
-
-## Future Enhancements
-
-- Implement email notifications for task completion
-- Add real-time status updates with WebSockets
-- Implement more sophisticated authentication (OAuth2, JWT)
-- Set up automated backups for PostgreSQL
-- Add comprehensive test coverage
+SmallClosedWorld Developer

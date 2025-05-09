@@ -62,6 +62,10 @@ def index(request):
     """
     return HttpResponse(html_content)
 
+# Simple health check endpoint for Kubernetes probes
+def health_check(request):
+    return HttpResponse("OK")
+
 schema_view = get_schema_view(
     openapi.Info(
         title="Task Processing API",
@@ -79,6 +83,7 @@ urlpatterns = [
     path('api-token-auth/', obtain_auth_token, name='api_token_auth'),
     path('swagger/', schema_view.with_ui('swagger', cache_timeout=0), name='schema-swagger-ui'),
     path('accounts/', include('django.contrib.auth.urls')),  # Add authentication URLs
+    path('health/', health_check, name='health_check'),  # Add health check endpoint
 ]
 
 if settings.DEBUG:
