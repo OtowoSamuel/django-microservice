@@ -87,7 +87,11 @@ jobs:
       
       - name: Deploy to Kubernetes
         run: |
-          # First check if web or django-service deployment exists
+          # Apply the full Kubernetes manifest first to ensure proper configuration
+          echo "Applying Kubernetes manifest from microservices-k8.yml..."
+          kubectl apply -f microservices-k8.yml
+          
+          # Determine which deployment exists
           if kubectl get deployment web &>/dev/null; then
             DEPLOYMENT_NAME=web
           elif kubectl get deployment django-service &>/dev/null; then
@@ -100,18 +104,18 @@ jobs:
           fi
           
           echo "Updating $DEPLOYMENT_NAME deployment with the new image..."
-          kubectl set image deployment/$DEPLOYMENT_NAME $DEPLOYMENT_NAME=${{ steps.push-image.outputs.image }}
+          kubectl set image deployment/$DEPLOYMENT_NAME $DEPLOYMENT_NAME=${{ steps.push-image.outputs.image }} --record
           
           # Update worker deployment with the new image
           echo "Updating worker deployment..."
-          kubectl set image deployment/worker worker=${{ steps.push-image.outputs.image }}
+          kubectl set image deployment/worker worker=${{ steps.push-image.outputs.image }} --record
           
-          # Wait for rollout to complete
+          # Wait for rollout to complete with increased timeout
           echo "Waiting for $DEPLOYMENT_NAME deployment rollout to complete..."
-          kubectl rollout status deployment/$DEPLOYMENT_NAME --timeout=180s
+          kubectl rollout status deployment/$DEPLOYMENT_NAME --timeout=300s
           
           echo "Waiting for worker deployment rollout to complete..."
-          kubectl rollout status deployment/worker --timeout=180s
+          kubectl rollout status deployment/worker --timeout=300s
       - name: Apply database migrations
         run: |
           # Get database credentials from the db service
