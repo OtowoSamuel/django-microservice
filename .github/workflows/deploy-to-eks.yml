@@ -118,16 +118,20 @@ jobs:
           kubectl rollout status deployment/worker --timeout=300s
       - name: Apply database migrations
         run: |
+          # Generate a unique job name with timestamp to avoid the "field is immutable" error
+          TIMESTAMP=$(date +%s)
+          JOB_NAME="django-migrate-$TIMESTAMP"
+          
           # Get database credentials from the db service
           DB_HOST=$(kubectl get service db -o jsonpath='{.spec.clusterIP}')
           
-          # Create a temporary pod to run migrations
-          echo "Creating migration job..."
+          # Create a migration job with a unique name
+          echo "Creating migration job: $JOB_NAME..."
           cat <<EOF | kubectl apply -f -
           apiVersion: batch/v1
           kind: Job
           metadata:
-            name: django-migrate-${{ github.sha }}
+            name: $JOB_NAME
             labels:
               app: django-migrate
           spec:
@@ -136,42 +140,28 @@ jobs:
               spec:
                 initContainers:
                 - name: check-db-ready
-                  image: postgres:15-alpine
+                  image: postgres:13-alpine
                   command: ['sh', '-c', 
                     'until pg_isready -h $DB_HOST -p 5432; do echo waiting for database; sleep 2; done;']
                 containers:
                 - name: django
                   image: ${{ steps.push-image.outputs.image }}
                   command: ["python", "manage.py", "migrate", "--noinput"]
-                  env:
-                  - name: DB_NAME
-                    value: "django_db"
-                  - name: DB_USER
-                    value: "postgres"
-                  - name: DB_PASSWORD
-                    value: "postgres"
-                  - name: DB_HOST
-                    value: "$DB_HOST"
-                  - name: DB_PORT
-                    value: "5432"
-                  - name: SECRET_KEY
-                    value: "${{ secrets.SECRET_KEY }}"
-                  - name: DEBUG
-                    value: "false"
-                  - name: CELERY_BROKER_URL
-                    value: "redis://redis-service:6379/0"
-                  - name: CELERY_RESULT_BACKEND
-                    value: "redis://redis-service:6379/0"
+                  envFrom:
+                  - secretRef:
+                      name: app-secrets
+                  - configMapRef:
+                      name: app-config
                 restartPolicy: Never
           EOF
           
           # Wait for migration job to complete
           echo "Waiting for migrations to complete..."
-          kubectl wait --for=condition=complete job/django-migrate-${{ github.sha }} --timeout=180s || true
+          kubectl wait --for=condition=complete job/$JOB_NAME --timeout=180s || true
           
           # Get logs from the job
           echo "Migration logs:"
-          kubectl logs job/django-migrate-${{ github.sha }}
+          kubectl logs job/$JOB_NAME
       - name: Update environment variables in deployments
         run: |
           # Get service name for web deployment

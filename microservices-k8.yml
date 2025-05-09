@@ -40,7 +40,7 @@ spec:
                   key: DB_NAME
                   optional: false
             - name: PGDATA
-              value: "/var/lib/postgresql/data/pgdata"
+              value: "/var/lib/postgresql/data/pgdata2"  # Changed to a new directory
           envFrom:
             - secretRef:
                 name: app-secrets
@@ -100,9 +100,10 @@ spec:
     spec:
       containers:
         - name: redis
-          image: redis:6-alpine
+          image: redis:7-alpine
           ports:
             - containerPort: 6379
+              name: redis
 ---
 # Web Deployment
 apiVersion: apps/v1
@@ -124,14 +125,14 @@ spec:
     spec:
       initContainers:
         - name: wait-for-postgres
-          image: busybox
-          command: ['sh', '-c', 'until nslookup db; do echo waiting for postgres; sleep 2; done;']
+          image: postgres:13-alpine
+          command: ['sh', '-c', "until pg_isready -h db -p 5432; do echo \"Waiting for postgres\"; sleep 2; done;"]
         - name: wait-for-redis
-          image: busybox
-          command: ['sh', '-c', 'until nslookup redis-service; do echo waiting for redis; sleep 2; done;']
+          image: redis:6-alpine
+          command: ['sh', '-c', "until redis-cli -h redis-service ping; do echo \"Waiting for Redis\"; sleep 2; done;"]
       containers:
         - name: web
-          image: ${ECR_REPO_URL}:latest
+          image: 343218225856.dkr.ecr.us-east-1.amazonaws.com/django-microservice:latest
           imagePullPolicy: Always
           ports:
             - containerPort: 8000
@@ -186,14 +187,14 @@ spec:
     spec:
       initContainers:
         - name: wait-for-postgres
-          image: busybox
-          command: ['sh', '-c', 'until nslookup db; do echo waiting for postgres; sleep 2; done;']
+          image: postgres:13-alpine
+          command: ['sh', '-c', "until pg_isready -h db -p 5432; do echo \"Waiting for postgres\"; sleep 2; done;"]
         - name: wait-for-redis
-          image: busybox
-          command: ['sh', '-c', 'until nslookup redis-service; do echo waiting for redis; sleep 2; done;']
+          image: redis:6-alpine
+          command: ['sh', '-c', "until redis-cli -h redis-service ping; do echo \"Waiting for Redis\"; sleep 2; done;"]
       containers:
         - name: worker
-          image: ${ECR_REPO_URL}:latest
+          image: 343218225856.dkr.ecr.us-east-1.amazonaws.com/django-microservice:latest
           envFrom:
             - secretRef:
                 name: app-secrets
@@ -233,6 +234,10 @@ metadata:
   name: app-config
   namespace: default
 data:
-  CELERY_BROKER_URL: redis://redis-service:6379/0
-  CELERY_RESULT_BACKEND: redis://redis-service:6379/0
+  DEBUG: "False"
+  ALLOWED_HOSTS: "*"
+  CELERY_BROKER_URL: "redis://redis-service:6379/0"
+  CELERY_RESULT_BACKEND: "redis://redis-service:6379/0"
+  REDIS_HOST: "redis-service"
+  REDIS_PORT: "6379"
   DJANGO_SETTINGS_MODULE: core.settings
