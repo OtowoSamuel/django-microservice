@@ -34,7 +34,6 @@ jobs:
           
           echo "Checking EKS access..."
           aws eks describe-cluster --name ${{ env.EKS_CLUSTER_NAME }}
-
       - name: Login to Amazon ECR
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v1
@@ -61,7 +60,6 @@ jobs:
           
           # Use the new GITHUB_OUTPUT environment file instead of set-output
           echo "image=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG" >> $GITHUB_OUTPUT
-
       - name: Install kubectl
         uses: azure/setup-kubectl@v3
         with:
@@ -79,7 +77,6 @@ jobs:
           kubectl get services db
           echo "PostgreSQL service details:"
           kubectl describe services db
-
       - name: Get current deployments
         run: |
           echo "Current deployments:"
@@ -115,7 +112,6 @@ jobs:
           
           echo "Waiting for worker deployment rollout to complete..."
           kubectl rollout status deployment/worker --timeout=180s
-
       - name: Apply database migrations
         run: |
           # Get database credentials from the db service
@@ -172,7 +168,6 @@ jobs:
           # Get logs from the job
           echo "Migration logs:"
           kubectl logs job/django-migrate-${{ github.sha }}
-
       - name: Update environment variables in deployments
         run: |
           # Get service name for web deployment
@@ -208,7 +203,6 @@ jobs:
             CELERY_BROKER_URL="redis://redis-service:6379/0" \
             CELERY_RESULT_BACKEND="redis://redis-service:6379/0" \
             DEBUG="false"
-
       - name: Verify deployment
         run: |
           echo "Checking pod status:"
@@ -227,4 +221,3 @@ jobs:
           else
             echo "No web or django-service service found"
           fi
-
